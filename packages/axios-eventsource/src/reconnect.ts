@@ -3,9 +3,9 @@ import type { ReconnectOptions } from "./types.js";
 export const DEFAULT_RECONNECT_INITIAL_DELAY_MS = 1_000;
 export const DEFAULT_RECONNECT_MAX_DELAY_MS = 30_000;
 
-export function getReconnectConfig(
-  options?: ReconnectOptions,
-): Required<Pick<ReconnectOptions, "initialDelayMs" | "maxDelayMs">> & {
+export function getReconnectConfig(options?: ReconnectOptions): Required<
+  Pick<ReconnectOptions, "initialDelayMs" | "maxDelayMs">
+> & {
   maxRetries?: number;
 } {
   const initialDelayMs = Math.max(0, options?.initialDelayMs ?? DEFAULT_RECONNECT_INITIAL_DELAY_MS);

@@ -1,6 +1,6 @@
 import http from "node:http";
 import axios from "axios";
-import type { SseErrorEvent, SseMessageEvent } from "axios-eventsource";
+import type { SseErrorEventPayload, SseMessageEvent } from "axios-eventsource";
 import { axiosEventSource } from "axios-eventsource";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -160,8 +160,8 @@ describe("axios-eventsource integration", () => {
       reconnect: { initialDelayMs: 10, maxDelayMs: 20 },
     });
 
-    source.addEventListener("tick", (event) => {
-      received.push(event.data);
+    source.addEventListener("tick", (event: Event) => {
+      received.push((event as unknown as SseMessageEvent).data);
     });
 
     await delay(220);
@@ -186,8 +186,8 @@ describe("axios-eventsource integration", () => {
     const source = axiosEventSource(client, `${server.baseUrl}/sse?auth=bearer`, {
       reconnect: { initialDelayMs: 10, maxDelayMs: 20 },
     });
-    source.addEventListener("tick", (event) => {
-      received.push(event.data);
+    source.addEventListener("tick", (event: Event) => {
+      received.push((event as unknown as SseMessageEvent).data);
     });
 
     await delay(80);
@@ -233,9 +233,13 @@ describe("axios-eventsource integration", () => {
       reconnect: { initialDelayMs: 10, maxDelayMs: 20 },
     });
 
-    source.addEventListener("tick", (event) => {
+    source.addEventListener("tick", (event: Event) => {
       received.push(
-        JSON.parse(event.data) as { count: number; method: string; body: Record<string, unknown> },
+        JSON.parse((event as unknown as SseMessageEvent).data) as {
+          count: number;
+          method: string;
+          body: Record<string, unknown>;
+        },
       );
     });
 
@@ -265,8 +269,8 @@ describe("axios-eventsource integration", () => {
       reconnect: { initialDelayMs: 10, maxDelayMs: 20 },
     });
 
-    source.addEventListener("tick", (event) => {
-      received.push(JSON.parse(event.data) as { method: string });
+    source.addEventListener("tick", (event: Event) => {
+      received.push(JSON.parse((event as unknown as SseMessageEvent).data) as { method: string });
     });
 
     await delay(100);
@@ -287,8 +291,8 @@ describe("axios-eventsource integration", () => {
       reconnect: { initialDelayMs: 30, maxDelayMs: 50 },
     });
 
-    source.addEventListener("tick", (event) => {
-      received.push(JSON.parse(event.data) as { id: number });
+    source.addEventListener("tick", (event: Event) => {
+      received.push(JSON.parse((event as unknown as SseMessageEvent).data) as { id: number });
     });
 
     await delay(300);
@@ -353,14 +357,16 @@ describe("axios-eventsource integration", () => {
     cleanup.push(server.close);
 
     const client = axios.create();
-    const errorCallbacks: Array<SseErrorEvent> = [];
+    const errorCallbacks: Array<SseErrorEventPayload> = [];
 
     const source = axiosEventSource(client, `${server.baseUrl}/sse?auth=bearer`, {
       auth: { type: "bearer", token: "wrong" },
       onerror: (event) => errorCallbacks.push(event),
       reconnect: { initialDelayMs: 10_000, maxDelayMs: 10_000 },
     });
-    source.addEventListener("error", (event) => errorCallbacks.push(event));
+    source.addEventListener("error", (event: Event) =>
+      errorCallbacks.push(event as unknown as SseErrorEventPayload),
+    );
 
     await delay(80);
     source.close();
@@ -382,7 +388,9 @@ describe("axios-eventsource integration", () => {
     const source = axiosEventSource(client, `${server.baseUrl}/sse?scenario=last-event-id`, {
       reconnect: { initialDelayMs: 10_000, maxDelayMs: 10_000 },
     });
-    source.addEventListener("tick", (event) => received.push(event));
+    source.addEventListener("tick", (event: Event) =>
+      received.push(event as unknown as SseMessageEvent),
+    );
 
     await delay(80);
     source.close();
@@ -405,8 +413,8 @@ describe("axios-eventsource integration", () => {
     const source = axiosEventSource(client, `${server.baseUrl}/sse?scenario=retry`, {
       reconnect: { initialDelayMs: 60_000, maxDelayMs: 60_000 },
     });
-    source.addEventListener("tick", (event) => {
-      received.push(JSON.parse(event.data) as { count: number });
+    source.addEventListener("tick", (event: Event) => {
+      received.push(JSON.parse((event as unknown as SseMessageEvent).data) as { count: number });
     });
 
     await delay(300);

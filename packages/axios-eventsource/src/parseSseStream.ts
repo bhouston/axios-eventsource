@@ -27,8 +27,7 @@ export async function* parseSseStream(
         accumulatedLastEventId = event.id;
       }
       // Default to "message" only when event field is absent (undefined). Empty string is passed through.
-      const type =
-        event.event === undefined ? "message" : event.event;
+      const type = event.event === undefined ? "message" : event.event;
       queue.push({
         type,
         data: event.data,

@@ -1,7 +1,7 @@
 import axios, { type AxiosInstance } from "axios";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { SseErrorEventPayload, SseMessageEvent } from "./index.js";
-import { axiosEventSource, CONNECTING, OPEN, CLOSED } from "./index.js";
+import { axiosEventSource, CLOSED, CONNECTING, OPEN } from "./index.js";
 
 function streamFromSsePayload(payload: string): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
@@ -780,9 +780,7 @@ describe("axiosEventSource", () => {
   });
 
   it("stops reconnecting after maxRetries failures", async () => {
-    const requestMock = vi.fn((_config: unknown) =>
-      Promise.reject(new Error("network error")),
-    );
+    const requestMock = vi.fn((_config: unknown) => Promise.reject(new Error("network error")));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
     const source = axiosEventSource(client, "/sse", {
       reconnect: { initialDelayMs: 5, maxDelayMs: 5, maxRetries: 2 },

@@ -3,8 +3,10 @@ import { parseSseStream } from "./parseSseStream.js";
 import { getNextDelay, getReconnectConfig, sleepWithAbort } from "./reconnect.js";
 import type {
   AxiosEventSourceFactory,
+  AxiosEventSourceLike,
   AxiosEventSourceOptions,
   AxiosEventSourceReadyState,
+  SseErrorEventPayload,
   SseEvent,
   SseMessageEvent,
 } from "./types.js";
@@ -88,7 +90,7 @@ function getResponseUrl(response: AxiosResponse): string | undefined {
 function isEventStreamResponse(response: AxiosResponse): boolean {
   const ct = response.headers?.["content-type"];
   if (typeof ct !== "string") return false;
-  const base = ct.split(";")[0].trim().toLowerCase();
+  const base = ct.split(";")[0]?.trim().toLowerCase() ?? "";
   return base === "text/event-stream";
 }
 
@@ -105,7 +107,7 @@ export class AxiosEventSource extends EventTarget {
   private _abortController = new AbortController();
   private _onopen: ((event: SseEvent) => void) | null = null;
   private _onmessage: ((event: SseMessageEvent) => void) | null = null;
-  private _onerror: ((event: SseErrorEvent) => void) | null = null;
+  private _onerror: ((event: SseErrorEventPayload) => void) | null = null;
 
   constructor(
     private readonly _client: AxiosInstance,
@@ -145,11 +147,11 @@ export class AxiosEventSource extends EventTarget {
     this._onmessage = value;
   }
 
-  get onerror(): ((event: SseErrorEvent) => void) | null {
+  get onerror(): ((event: SseErrorEventPayload) => void) | null {
     return this._onerror;
   }
 
-  set onerror(value: ((event: SseErrorEvent) => void) | null) {
+  set onerror(value: ((event: SseErrorEventPayload) => void) | null) {
     this._onerror = value;
   }
 
@@ -261,7 +263,7 @@ export class AxiosEventSource extends EventTarget {
             });
 
             if (parsed.type === "message") {
-              this._onmessage?.(messageEvent as SseMessageEvent);
+              this._onmessage?.(messageEvent as unknown as SseMessageEvent);
             }
             this.dispatchEvent(messageEvent);
           }
@@ -273,7 +275,7 @@ export class AxiosEventSource extends EventTarget {
           retryCount += 1;
           const errorEvent = new SseErrorEvent(error);
           this.dispatchEvent(errorEvent);
-          this._onerror?.(errorEvent);
+          this._onerror?.(errorEvent as SseErrorEventPayload);
         }
 
         if (this._abortController.signal.aborted) {
@@ -300,7 +302,7 @@ export const axiosEventSource: AxiosEventSourceFactory = (
   clientOrUrl: AxiosInstance | string,
   urlOrOptions?: string | AxiosEventSourceOptions,
   maybeOptions?: AxiosEventSourceOptions,
-): InstanceType<typeof AxiosEventSource> => {
+): AxiosEventSourceLike => {
   const client = isAxiosInstance(clientOrUrl) ? clientOrUrl : axios.create();
   const url = isAxiosInstance(clientOrUrl) ? (urlOrOptions as string) : clientOrUrl;
   const options = isAxiosInstance(clientOrUrl)
