@@ -246,6 +246,10 @@ pnpm test
 - `examples/fastify-server`: SSE producer demo (Fastify)
 - `examples/website`: consumer demo (TanStack Start)
 
+## Author
+
+[Ben Houston](https://benhouston3d.com), Sponsored by [Land of Assets](https://landofassets.com)
+
 [npm]: https://img.shields.io/npm/v/axios-eventsource
 [npm-url]: https://www.npmjs.com/package/axios-eventsource
 [npm-downloads]: https://img.shields.io/npm/dw/axios-eventsource
