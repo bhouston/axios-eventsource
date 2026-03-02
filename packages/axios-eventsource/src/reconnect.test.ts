@@ -22,6 +22,14 @@ describe("reconnect", () => {
     });
   });
 
+  it("passes through maxRetries when provided", () => {
+    expect(getReconnectConfig({ maxRetries: 5 })).toMatchObject({ maxRetries: 5 });
+    expect(getReconnectConfig({ initialDelayMs: 100, maxRetries: 3 })).toMatchObject({
+      initialDelayMs: 100,
+      maxRetries: 3,
+    });
+  });
+
   it("applies exponential backoff with cap", () => {
     expect(getNextDelay(100, 500)).toBe(200);
     expect(getNextDelay(400, 500)).toBe(500);

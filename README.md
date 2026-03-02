@@ -43,8 +43,10 @@ event.ports       // [] (per SSE spec)
 ### Full Interface Parity
 
 ```ts
-stream.readyState;      // 0 = CONNECTING, 1 = OPEN, 2 = CLOSED
-stream.url;             // the URL as passed
+import { axiosEventSource, CONNECTING, OPEN, CLOSED } from "axios-eventsource";
+
+stream.readyState;      // CONNECTING (0), OPEN (1), or CLOSED (2)
+stream.url;             // the URL (after redirects when the adapter provides it)
 stream.withCredentials; // from options (default false)
 ```
 
@@ -58,7 +60,13 @@ stream.withCredentials; // from options (default false)
 - **`open` and `error` via `addEventListener`**: Connection lifecycle events through the standard listener path.
 - **Production-ready auth**: Interceptors, `none`, `basic`, and `bearer` (including async token providers).
 - **Exponential backoff**: Configurable `initialDelayMs` / `maxDelayMs` with server override support.
+- **Max reconnect limit**: Optional `reconnect.maxRetries` to stop after a set number of failures.
+- **Content-Type check**: Optional `rejectNonEventStream` (default `true`) rejects non–`text/event-stream` responses.
+- **Encoding**: Optional `encoding` (default `"utf-8"`) passed to `TextDecoder` for the stream.
+- **URL and origin after redirects**: When the adapter exposes the final response URL, `url` and event `origin` use it.
+- **SSE parsing**: Comments (`:...`) are ignored; multiline `data:` is concatenated with newlines per the spec. Event type defaults to `"message"` only when the `event` field is absent (empty `event:` is passed through as `""`).
 - **Typed API surface**: Full TypeScript types for all options, event payloads, and client interface.
+- **EventTarget**: The returned instance extends `EventTarget`, so `instanceof EventTarget` and `dispatchEvent` work as expected.
 
 ## Install
 
@@ -143,9 +151,20 @@ axiosEventSource("https://api.example.com/sse", {
 | `open`/`error` via `addEventListener` | Yes | Yes |
 | `once` and `handleEvent` listener options | Yes | Yes |
 | `url`, `withCredentials`, `readyState` | Yes | Yes |
+| `CONNECTING` / `OPEN` / `CLOSED` constants | Yes | Yes (exported) |
+| Extends `EventTarget` | Yes | Yes |
 | Axios interceptors / auth | No | Yes |
 | POST method support | No | Yes |
-| Node.js compatible | No | Yes |
+| Node.js compatible | No | Yes (Node 18+) |
+
+### Requirements and limitations
+
+- **Adapter**: Uses Axios with the fetch adapter and streaming response; the response body must be a `ReadableStream<Uint8Array>`.
+- **Node**: In Node.js, use Node 18+ so `EventTarget` and `MessageEvent` are available.
+- **Encoding**: The stream is decoded as UTF-8 by default; use the `encoding` option to override.
+- **URL / origin**: `url` and event `origin` are taken from the request URL you pass. When the adapter exposes the final response URL (e.g. after redirects), the library uses it for `url` and `origin`.
+- **Reconnect**: Reconnecting continues until you call `close()` or abort `signal`, unless `reconnect.maxRetries` is set.
+- **Content-Type**: By default, responses must have `Content-Type: text/event-stream`; set `rejectNonEventStream: false` to allow other types.
 
 ## Local Development
 

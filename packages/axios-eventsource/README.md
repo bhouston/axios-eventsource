@@ -20,7 +20,13 @@ If your app already relies on Axios for authentication, interceptors, base URLs,
 - **`open` and `error` events via `addEventListener`**: Register listeners for connection lifecycle events using the same API as named events.
 - **Interface parity**: Exposes `url`, `withCredentials`, `readyState`, `onopen`, `onmessage`, and `onerror` matching the native `EventSource` interface.
 - **Production-ready auth paths**: Use interceptors for token refresh, or built-in `auth` strategies: `none`, `basic`, and `bearer` (including async token providers).
-- **Resilient reconnect behavior**: Automatic reconnect with configurable exponential backoff (`initialDelayMs`, `maxDelayMs`).
+- **Resilient reconnect behavior**: Automatic reconnect with configurable exponential backoff (`initialDelayMs`, `maxDelayMs`) and optional `maxRetries`.
+- **Max reconnect limit**: Set `reconnect.maxRetries` to stop after a set number of failures.
+- **Content-Type check**: By default (`rejectNonEventStream: true`), responses must be `text/event-stream`; set to `false` to allow other types.
+- **Encoding**: Optional `encoding` (default `"utf-8"`) passed to `TextDecoder` for the stream.
+- **URL and origin after redirects**: When the adapter exposes the final response URL, `url` and event `origin` use it.
+- **SSE parsing**: Comments (lines starting with `:`) are ignored; multiline `data:` is concatenated with newlines per the spec. Event type defaults to `"message"` only when the `event` field is absent; an empty `event:` is passed through as `""`.
+- **EventTarget**: The returned instance extends `EventTarget`; `instanceof EventTarget` and standard listener APIs work.
 - **Typed API surface**: Strong TypeScript types throughout.
 
 ## Install
@@ -149,8 +155,10 @@ stream.addEventListener("ping", handler); // no-op
 ### Interface Properties
 
 ```ts
-stream.readyState;      // 0 = CONNECTING, 1 = OPEN, 2 = CLOSED
-stream.url;             // the URL passed to axiosEventSource
+import { CONNECTING, OPEN, CLOSED } from "axios-eventsource";
+
+stream.readyState;      // CONNECTING (0), OPEN (1), or CLOSED (2)
+stream.url;             // URL (after redirects when the adapter provides it)
 stream.withCredentials; // boolean, from options.withCredentials (default false)
 ```
 
@@ -206,14 +214,14 @@ Overloads:
 - `axiosEventSource(axiosInstance, url, options?)`
 - `axiosEventSource(url, options?)`
 
-Returns an `AxiosEventSourceLike` object:
+Returns an `AxiosEventSourceLike` object (extends `EventTarget`):
 
-- `readyState` (`0` connecting, `1` open, `2` closed)
-- `url` — the URL passed at construction
+- `readyState` — `CONNECTING` (0), `OPEN` (1), or `CLOSED` (2); use exported constants.
+- `url` — the URL (after redirects when the adapter provides it)
 - `withCredentials` — boolean (default `false`)
-- `onopen` — receives `SseEvent { type: "open" }`
-- `onmessage` — receives `SseMessageEvent`
-- `onerror` — receives `SseErrorEvent { type: "error", error: unknown }`
+- `onopen` — receives `Event` with `type: "open"`
+- `onmessage` — receives `MessageEvent` (or `SseMessageEvent`-shaped)
+- `onerror` — receives `SseErrorEvent` (class with `error` property)
 - `addEventListener(type, listener, options?)` — supports `"open"`, `"error"`, `"message"`, and any named event type; options: `{ once?: boolean }`
 - `removeEventListener(type, listener)`
 - `close()`
@@ -221,20 +229,22 @@ Returns an `AxiosEventSourceLike` object:
 `options` supports standard Axios request config (with SSE-safe restrictions) plus:
 
 - `auth` — built-in auth strategy
-- `reconnect` — `{ initialDelayMs?, maxDelayMs? }`
+- `reconnect` — `{ initialDelayMs?, maxDelayMs?, maxRetries? }`
+- `encoding` — text decoding (default `"utf-8"`), passed to `TextDecoder`
+- `rejectNonEventStream` — reject non–`text/event-stream` responses (default `true`)
 - `signal` — external `AbortSignal`
 - `withCredentials` — boolean
 - `onopen` — `(event: SseEvent) => void`
-- `onerror` — `(event: SseErrorEvent) => void`
+- `onerror` — `(event: SseErrorEventPayload) => void`
 
 ## Intentional Deviations from Native `EventSource`
 
 | Area | Native `EventSource` | `axios-eventsource` | Reason |
 | :--- | :--- | :--- | :--- |
 | Constructor | `new EventSource(url)` | `axiosEventSource(client, url, opts)` | Enables Axios instance injection |
-| `onerror` event | Bare `Event` | `SseErrorEvent` with `error` field | Carries the actual error for debugging |
+| `onerror` event | Bare `Event` | `SseErrorEvent` class with `error` field | Carries the actual error for debugging |
 | Network adapter | Browser native | Axios + Fetch adapter | Enables interceptors, auth, and Node.js compatibility |
-| `CONNECTING/OPEN/CLOSED` statics | Yes | No | Not needed for practical usage |
+| `CONNECTING/OPEN/CLOSED` statics | On constructor | Exported constants | Same values; import when needed |
 | Capture phase | Supported via options | Not supported | SSE listeners don't use capture |
 
 ## Why Axios + SSE Works Well

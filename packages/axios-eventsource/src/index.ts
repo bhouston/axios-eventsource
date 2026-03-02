@@ -1,28 +1,36 @@
-import axios, { type AxiosInstance, type RawAxiosRequestHeaders } from "axios";
+import axios, { type AxiosInstance, type AxiosResponse, type RawAxiosRequestHeaders } from "axios";
 import { parseSseStream } from "./parseSseStream.js";
 import { getNextDelay, getReconnectConfig, sleepWithAbort } from "./reconnect.js";
 import type {
-  AddEventListenerOptions,
   AxiosEventSourceFactory,
-  AxiosEventSourceLike,
   AxiosEventSourceOptions,
   AxiosEventSourceReadyState,
-  SseErrorEvent,
   SseEvent,
-  SseEventListener,
   SseMessageEvent,
 } from "./types.js";
 
-const READY_STATE_CONNECTING = 0 as const;
-const READY_STATE_OPEN = 1 as const;
-const READY_STATE_CLOSED = 2 as const;
+/** ReadyState constant: connection not yet open. */
+export const CONNECTING = 0 as const;
+/** ReadyState constant: connection is open. */
+export const OPEN = 1 as const;
+/** ReadyState constant: connection is closed. */
+export const CLOSED = 2 as const;
 
-type AnyListener = SseEventListener<SseEvent | SseMessageEvent | SseErrorEvent>;
+const READY_STATE_CONNECTING = CONNECTING;
+const READY_STATE_OPEN = OPEN;
+const READY_STATE_CLOSED = CLOSED;
 
-type ListenerEntry = {
-  listener: AnyListener;
-  once: boolean;
-};
+/**
+ * Error event with an .error property for the underlying failure.
+ * Dispatched when the connection fails or encounters an error.
+ */
+export class SseErrorEvent extends Event {
+  readonly error: unknown;
+  constructor(error: unknown) {
+    super("error");
+    this.error = error;
+  }
+}
 
 function isAxiosInstance(value: unknown): value is AxiosInstance {
   const candidate = value as AxiosInstance;
@@ -57,60 +65,6 @@ async function resolveAuthHeaders(
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-function invokeListener(
-  listener: AnyListener,
-  event: SseEvent | SseMessageEvent | SseErrorEvent,
-): void {
-  if (typeof listener === "function") {
-    listener(event);
-  } else {
-    listener.handleEvent(event);
-  }
-}
-
-function createDispatchers() {
-  const listenerMap = new Map<string, ListenerEntry[]>();
-
-  function add(type: string, listener: AnyListener, options?: AddEventListenerOptions): void {
-    const arr = listenerMap.get(type) ?? [];
-    if (arr.some((entry) => entry.listener === listener)) {
-      return;
-    }
-    arr.push({ listener, once: options?.once ?? false });
-    listenerMap.set(type, arr);
-  }
-
-  function remove(type: string, listener: AnyListener): void {
-    const arr = listenerMap.get(type);
-    if (!arr) {
-      return;
-    }
-    const idx = arr.findIndex((entry) => entry.listener === listener);
-    if (idx !== -1) {
-      arr.splice(idx, 1);
-    }
-    if (arr.length === 0) {
-      listenerMap.delete(type);
-    }
-  }
-
-  function emit(type: string, event: SseEvent | SseMessageEvent | SseErrorEvent): void {
-    const arr = listenerMap.get(type);
-    if (!arr) {
-      return;
-    }
-    const snapshot = [...arr];
-    for (const entry of snapshot) {
-      invokeListener(entry.listener, event);
-      if (entry.once) {
-        remove(type, entry.listener);
-      }
-    }
-  }
-
-  return { add, remove, emit };
-}
-
 function getOrigin(url: string): string {
   try {
     return new URL(url).origin;
@@ -119,167 +73,243 @@ function getOrigin(url: string): string {
   }
 }
 
+/** Try to get the final URL from the response (e.g. after redirects). */
+function getResponseUrl(response: AxiosResponse): string | undefined {
+  const r = response as unknown as {
+    url?: string;
+    request?: { url?: string; responseURL?: string };
+  };
+  if (typeof r.url === "string") return r.url;
+  if (typeof r.request?.responseURL === "string") return r.request.responseURL;
+  if (typeof r.request?.url === "string") return r.request.url;
+  return undefined;
+}
+
+function isEventStreamResponse(response: AxiosResponse): boolean {
+  const ct = response.headers?.["content-type"];
+  if (typeof ct !== "string") return false;
+  const base = ct.split(";")[0].trim().toLowerCase();
+  return base === "text/event-stream";
+}
+
+/**
+ * SSE client that extends EventTarget and matches the EventSource API surface.
+ * Uses Axios for the request so interceptors, auth, and config are reused.
+ */
+export class AxiosEventSource extends EventTarget {
+  readonly withCredentials: boolean;
+  private _readyState: AxiosEventSourceReadyState = READY_STATE_CONNECTING;
+  private _url: string;
+  private _initialUrl: string;
+  private _origin: string;
+  private _abortController = new AbortController();
+  private _onopen: ((event: SseEvent) => void) | null = null;
+  private _onmessage: ((event: SseMessageEvent) => void) | null = null;
+  private _onerror: ((event: SseErrorEvent) => void) | null = null;
+
+  constructor(
+    private readonly _client: AxiosInstance,
+    url: string,
+    private readonly _options: AxiosEventSourceOptions = {},
+  ) {
+    super();
+    this._initialUrl = url;
+    this._url = url;
+    this._origin = getOrigin(url);
+    this.withCredentials = _options.withCredentials ?? false;
+    this._onopen = _options.onopen ?? null;
+    this._onerror = _options.onerror ?? null;
+  }
+
+  get readyState(): AxiosEventSourceReadyState {
+    return this._readyState;
+  }
+
+  get url(): string {
+    return this._url;
+  }
+
+  get onopen(): ((event: SseEvent) => void) | null {
+    return this._onopen;
+  }
+
+  set onopen(value: ((event: SseEvent) => void) | null) {
+    this._onopen = value;
+  }
+
+  get onmessage(): ((event: SseMessageEvent) => void) | null {
+    return this._onmessage;
+  }
+
+  set onmessage(value: ((event: SseMessageEvent) => void) | null) {
+    this._onmessage = value;
+  }
+
+  get onerror(): ((event: SseErrorEvent) => void) | null {
+    return this._onerror;
+  }
+
+  set onerror(value: ((event: SseErrorEvent) => void) | null) {
+    this._onerror = value;
+  }
+
+  close(): void {
+    if (!this._abortController.signal.aborted) {
+      this._abortController.abort();
+    }
+    this._readyState = READY_STATE_CLOSED;
+  }
+
+  /** Called by the factory to start the connection loop. */
+  _start(): void {
+    const options = this._options;
+    const reconnect = getReconnectConfig(options.reconnect);
+    const rejectNonEventStream = options.rejectNonEventStream !== false;
+    const encoding = options.encoding ?? "utf-8";
+
+    const {
+      auth: _ignoredAuth,
+      method: _ignoredMethod,
+      reconnect: _ignoredReconnect,
+      onopen: _ignoredOnopen,
+      onerror: _ignoredOnerror,
+      encoding: _ignoredEncoding,
+      rejectNonEventStream: _ignoredReject,
+      ...requestOptions
+    } = options;
+
+    const method = options.method ?? "GET";
+    const url = this._initialUrl;
+
+    // If external signal is already aborted, close immediately.
+    if (options.signal?.aborted) {
+      this.close();
+      return;
+    }
+    options.signal?.addEventListener("abort", () => this.close(), { once: true });
+
+    const connect = async (): Promise<void> => {
+      let lastEventId = "";
+      let baseReconnectDelay = reconnect.initialDelayMs;
+      let reconnectDelay = baseReconnectDelay;
+      let retryCount = 0;
+
+      while (!this._abortController.signal.aborted) {
+        try {
+          const authHeaders = await resolveAuthHeaders(options);
+          const response = await this._client.request({
+            method,
+            url,
+            ...requestOptions,
+            headers: {
+              Accept: "text/event-stream",
+              "Cache-Control": "no-cache",
+              ...(options.headers ?? {}),
+              ...authHeaders,
+              ...(lastEventId !== "" ? { "Last-Event-ID": lastEventId } : {}),
+            },
+            responseType: "stream",
+            adapter: "fetch",
+            decompress: false,
+            signal: this._abortController.signal,
+          });
+
+          if (response.status !== 200) {
+            throw new Error(`Unexpected status code: ${response.status}`);
+          }
+
+          if (rejectNonEventStream && !isEventStreamResponse(response)) {
+            throw new Error(
+              `Expected Content-Type text/event-stream, got ${response.headers?.["content-type"] ?? "unknown"}`,
+            );
+          }
+
+          const responseUrl = getResponseUrl(response);
+          if (responseUrl !== undefined) {
+            this._url = responseUrl;
+            this._origin = getOrigin(responseUrl);
+          }
+
+          this._readyState = READY_STATE_OPEN;
+          reconnectDelay = baseReconnectDelay;
+          retryCount = 0;
+
+          const openEvent = new Event("open");
+          this.dispatchEvent(openEvent);
+          this._onopen?.(openEvent as SseEvent);
+
+          for await (const parsed of parseSseStream(
+            response.data as ReadableStream<Uint8Array>,
+            {
+              onRetry: (ms) => {
+                baseReconnectDelay = ms;
+                reconnectDelay = ms;
+              },
+            },
+            encoding,
+          )) {
+            if (this._abortController.signal.aborted) {
+              return;
+            }
+
+            lastEventId = parsed.lastEventId;
+
+            const messageEvent = new MessageEvent(parsed.type, {
+              data: parsed.data,
+              origin: this._origin,
+              lastEventId: parsed.lastEventId,
+            });
+
+            if (parsed.type === "message") {
+              this._onmessage?.(messageEvent as SseMessageEvent);
+            }
+            this.dispatchEvent(messageEvent);
+          }
+        } catch (error) {
+          if (this._abortController.signal.aborted) {
+            return;
+          }
+
+          retryCount += 1;
+          const errorEvent = new SseErrorEvent(error);
+          this.dispatchEvent(errorEvent);
+          this._onerror?.(errorEvent);
+        }
+
+        if (this._abortController.signal.aborted) {
+          return;
+        }
+
+        const maxRetries = reconnect.maxRetries;
+        if (maxRetries !== undefined && retryCount >= maxRetries) {
+          this.close();
+          return;
+        }
+
+        this._readyState = READY_STATE_CONNECTING;
+        await sleepWithAbort(reconnectDelay, this._abortController.signal);
+        reconnectDelay = getNextDelay(reconnectDelay, reconnect.maxDelayMs);
+      }
+    };
+
+    void connect();
+  }
+}
+
 export const axiosEventSource: AxiosEventSourceFactory = (
   clientOrUrl: AxiosInstance | string,
   urlOrOptions?: string | AxiosEventSourceOptions,
   maybeOptions?: AxiosEventSourceOptions,
-): AxiosEventSourceLike => {
+): InstanceType<typeof AxiosEventSource> => {
   const client = isAxiosInstance(clientOrUrl) ? clientOrUrl : axios.create();
   const url = isAxiosInstance(clientOrUrl) ? (urlOrOptions as string) : clientOrUrl;
   const options = isAxiosInstance(clientOrUrl)
     ? maybeOptions
     : (urlOrOptions as AxiosEventSourceOptions | undefined);
 
-  const abortController = new AbortController();
-  const reconnect = getReconnectConfig(options?.reconnect);
-  const origin = getOrigin(url);
-  const events = createDispatchers();
-  const {
-    auth: _ignoredAuth,
-    method: _ignoredMethod,
-    reconnect: _ignoredReconnect,
-    onopen: _ignoredOnopen,
-    onerror: _ignoredOnerror,
-    ...requestOptions
-  } = options ?? {};
-
-  const method = options?.method ?? "GET";
-  const withCredentials = options?.withCredentials ?? false;
-
-  let readyState: AxiosEventSourceReadyState = READY_STATE_CONNECTING;
-  let onopen: ((event: SseEvent) => void) | null = options?.onopen ?? null;
-  let onmessage: ((event: SseMessageEvent) => void) | null = null;
-  let onerror: ((event: SseErrorEvent) => void) | null = options?.onerror ?? null;
-
-  const close = () => {
-    if (!abortController.signal.aborted) {
-      abortController.abort();
-    }
-    readyState = READY_STATE_CLOSED;
-  };
-
-  options?.signal?.addEventListener("abort", close, { once: true });
-
-  const connect = async (): Promise<void> => {
-    // lastEventId persists across reconnects and is sent as Last-Event-ID header.
-    let lastEventId = "";
-    // Server-sent retry: overrides the configured initial delay as the reconnect base.
-    let baseReconnectDelay = reconnect.initialDelayMs;
-    let reconnectDelay = baseReconnectDelay;
-
-    while (!abortController.signal.aborted) {
-      try {
-        const authHeaders = await resolveAuthHeaders(options);
-        const response = await client.request({
-          method,
-          url,
-          ...requestOptions,
-          headers: {
-            Accept: "text/event-stream",
-            "Cache-Control": "no-cache",
-            ...(options?.headers ?? {}),
-            ...authHeaders,
-            ...(lastEventId !== "" ? { "Last-Event-ID": lastEventId } : {}),
-          },
-          responseType: "stream",
-          adapter: "fetch",
-          decompress: false,
-          signal: abortController.signal,
-        });
-
-        if (response.status !== 200) {
-          throw new Error(`Unexpected status code: ${response.status}`);
-        }
-
-        readyState = READY_STATE_OPEN;
-        reconnectDelay = baseReconnectDelay;
-
-        const openEvent: SseEvent = { type: "open" };
-        onopen?.(openEvent);
-        events.emit("open", openEvent);
-
-        for await (const parsed of parseSseStream(response.data as ReadableStream<Uint8Array>, {
-          onRetry: (ms) => {
-            baseReconnectDelay = ms;
-            reconnectDelay = ms;
-          },
-        })) {
-          if (abortController.signal.aborted) {
-            return;
-          }
-
-          lastEventId = parsed.lastEventId;
-
-          const messageEvent: SseMessageEvent = {
-            type: parsed.type,
-            data: parsed.data,
-            origin,
-            lastEventId: parsed.lastEventId,
-            source: null,
-            ports: [],
-          };
-
-          if (parsed.type === "message") {
-            onmessage?.(messageEvent);
-          }
-          events.emit(parsed.type, messageEvent);
-        }
-      } catch (error) {
-        if (abortController.signal.aborted) {
-          return;
-        }
-        const errorEvent: SseErrorEvent = { type: "error", error };
-        onerror?.(errorEvent);
-        events.emit("error", errorEvent);
-      }
-
-      if (abortController.signal.aborted) {
-        return;
-      }
-      readyState = READY_STATE_CONNECTING;
-      await sleepWithAbort(reconnectDelay, abortController.signal);
-      reconnectDelay = getNextDelay(reconnectDelay, reconnect.maxDelayMs);
-    }
-  };
-
-  void connect();
-
-  return {
-    get readyState() {
-      return readyState;
-    },
-    get url() {
-      return url;
-    },
-    get withCredentials() {
-      return withCredentials;
-    },
-    get onopen() {
-      return onopen;
-    },
-    set onopen(value) {
-      onopen = value;
-    },
-    get onmessage() {
-      return onmessage;
-    },
-    set onmessage(value) {
-      onmessage = value;
-    },
-    get onerror() {
-      return onerror;
-    },
-    set onerror(value) {
-      onerror = value;
-    },
-    addEventListener(type, listener, opts) {
-      events.add(type, listener as AnyListener, opts);
-    },
-    removeEventListener(type, listener) {
-      events.remove(type, listener as AnyListener);
-    },
-    close,
-  };
+  const instance = new AxiosEventSource(client, url, options);
+  instance._start();
+  return instance;
 };
 
 export type {
@@ -288,7 +318,7 @@ export type {
   AxiosEventSourceLike,
   AxiosEventSourceOptions,
   ReconnectOptions,
-  SseErrorEvent,
+  SseErrorEventPayload,
   SseEvent,
   SseEventListener,
   SseMessageEvent,

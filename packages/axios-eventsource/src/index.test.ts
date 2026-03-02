@@ -1,7 +1,7 @@
 import axios, { type AxiosInstance } from "axios";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { SseErrorEvent, SseMessageEvent } from "./index.js";
-import { axiosEventSource } from "./index.js";
+import type { SseErrorEventPayload, SseMessageEvent } from "./index.js";
+import { axiosEventSource, CONNECTING, OPEN, CLOSED } from "./index.js";
 
 function streamFromSsePayload(payload: string): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
@@ -15,8 +15,20 @@ function streamFromSsePayload(payload: string): ReadableStream<Uint8Array> {
 }
 
 // Helper to create a mock that accepts a config argument so mock.calls[0]?.[0] is well-typed.
-function makeRequestMock(result: () => Promise<{ status: number; data: unknown }>) {
-  return vi.fn((_config: unknown) => result());
+// Ensures 200 + stream responses include Content-Type for rejectNonEventStream (default true).
+function makeRequestMock(
+  result: () => Promise<{ status: number; data: unknown; headers?: Record<string, string> }>,
+) {
+  return vi.fn(async (_config: unknown) => {
+    const res = await result();
+    if (res.status === 200 && res.data != null) {
+      return {
+        ...res,
+        headers: { ...res.headers, "content-type": "text/event-stream" },
+      };
+    }
+    return res;
+  });
 }
 
 describe("axiosEventSource", () => {
@@ -242,7 +254,7 @@ describe("axiosEventSource", () => {
     source.close();
 
     expect(openEvents).toHaveLength(1);
-    expect(openEvents[0]).toEqual({ type: "open" });
+    expect((openEvents[0] as Event).type).toBe("open");
   });
 
   it("addEventListener('open', ...) fires when connection opens", async () => {
@@ -270,7 +282,7 @@ describe("axiosEventSource", () => {
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
-    const errorEvents: SseErrorEvent[] = [];
+    const errorEvents: SseErrorEventPayload[] = [];
     const source = axiosEventSource(client, "/sse", {
       onerror: (err) => errorEvents.push(err),
       reconnect: { initialDelayMs: 10_000, maxDelayMs: 10_000 },
@@ -290,7 +302,7 @@ describe("axiosEventSource", () => {
     const requestMock = vi.fn((_config: unknown) => Promise.reject(networkError));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
-    const errorEvents: SseErrorEvent[] = [];
+    const errorEvents: SseErrorEventPayload[] = [];
     const source = axiosEventSource(client, "/sse", {
       onerror: (event) => errorEvents.push(event),
       reconnect: { initialDelayMs: 10_000, maxDelayMs: 10_000 },
@@ -318,8 +330,8 @@ describe("axiosEventSource", () => {
     source.close();
 
     expect(errorEvents.length).toBeGreaterThan(0);
-    expect((errorEvents[0] as SseErrorEvent).type).toBe("error");
-    expect((errorEvents[0] as SseErrorEvent).error).toBeInstanceOf(Error);
+    expect((errorEvents[0] as SseErrorEventPayload).type).toBe("error");
+    expect((errorEvents[0] as SseErrorEventPayload).error).toBeInstanceOf(Error);
   });
 
   it("stops reconnecting when close() is called inside onerror", async () => {
@@ -393,11 +405,13 @@ describe("axiosEventSource", () => {
       if (callCount === 1) {
         return Promise.resolve({
           status: 200,
+          headers: { "content-type": "text/event-stream" },
           data: streamFromSsePayload("id: 42\ndata: first\n\n"),
         });
       }
       return Promise.resolve({
         status: 200,
+        headers: { "content-type": "text/event-stream" },
         data: streamFromSsePayload("data: second\n\n"),
       });
     });
@@ -517,11 +531,13 @@ describe("axiosEventSource", () => {
       if (callCount === 1) {
         return Promise.resolve({
           status: 200,
+          headers: { "content-type": "text/event-stream" },
           data: streamFromSsePayload("event: ping\ndata: first\n\nevent: ping\ndata: second\n\n"),
         });
       }
       return Promise.resolve({
         status: 200,
+        headers: { "content-type": "text/event-stream" },
         data: streamFromSsePayload("event: ping\ndata: third\n\n"),
       });
     });
@@ -623,7 +639,7 @@ describe("axiosEventSource", () => {
 
     const openFn = () => {};
     const messageFn = (_event: SseMessageEvent) => {};
-    const errorFn = (_event: SseErrorEvent) => {};
+    const errorFn = (_event: SseErrorEventPayload) => {};
 
     source.onopen = openFn;
     source.onmessage = messageFn;
@@ -656,11 +672,13 @@ describe("axiosEventSource", () => {
       if (callCount === 1) {
         return Promise.resolve({
           status: 200,
+          headers: { "content-type": "text/event-stream" },
           data: streamFromSsePayload("retry: 50\ndata: first\n\n"),
         });
       }
       return Promise.resolve({
         status: 200,
+        headers: { "content-type": "text/event-stream" },
         data: streamFromSsePayload("data: second\n\n"),
       });
     });
@@ -711,6 +729,68 @@ describe("axiosEventSource", () => {
     source.close();
 
     expect(received[0]?.origin).toBe("");
+  });
+
+  it("exposes CONNECTING, OPEN, CLOSED constants", () => {
+    expect(CONNECTING).toBe(0);
+    expect(OPEN).toBe(1);
+    expect(CLOSED).toBe(2);
+  });
+
+  it("returned instance is an EventTarget", async () => {
+    const requestMock = makeRequestMock(async () => ({
+      status: 200,
+      data: streamFromSsePayload(""),
+    }));
+    const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
+    const source = axiosEventSource(client, "/sse");
+    expect(source instanceof EventTarget).toBe(true);
+    source.close();
+  });
+
+  it("closes immediately when options.signal is already aborted", async () => {
+    const requestMock = vi.fn();
+    const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
+    const controller = new AbortController();
+    controller.abort();
+    const source = axiosEventSource(client, "/sse", { signal: controller.signal });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(source.readyState).toBe(2);
+    expect(requestMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects response when rejectNonEventStream is true and Content-Type is not text/event-stream", async () => {
+    const requestMock = vi.fn((_config: unknown) =>
+      Promise.resolve({
+        status: 200,
+        headers: { "content-type": "application/json" },
+        data: streamFromSsePayload("data: x\n\n"),
+      }),
+    );
+    const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
+    const errorEvents: SseErrorEventPayload[] = [];
+    const source = axiosEventSource(client, "/sse", {
+      onerror: (e) => errorEvents.push(e),
+      reconnect: { initialDelayMs: 10_000, maxDelayMs: 10_000 },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    source.close();
+    expect(errorEvents).toHaveLength(1);
+    expect((errorEvents[0]?.error as Error).message).toContain("Content-Type");
+  });
+
+  it("stops reconnecting after maxRetries failures", async () => {
+    const requestMock = vi.fn((_config: unknown) =>
+      Promise.reject(new Error("network error")),
+    );
+    const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
+    const source = axiosEventSource(client, "/sse", {
+      reconnect: { initialDelayMs: 5, maxDelayMs: 5, maxRetries: 2 },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(source.readyState).toBe(2);
+    // maxRetries: 2 => initial attempt + 1 reconnect, then stop
+    expect(requestMock).toHaveBeenCalledTimes(2);
   });
 
   afterEach(() => {

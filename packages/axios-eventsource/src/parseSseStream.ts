@@ -13,9 +13,10 @@ export type ParseSseStreamCallbacks = {
 export async function* parseSseStream(
   stream: ReadableStream<Uint8Array>,
   callbacks?: ParseSseStreamCallbacks,
+  encoding?: string,
 ): AsyncGenerator<ParsedSseEvent> {
   const reader = stream.getReader();
-  const decoder = new TextDecoder();
+  const decoder = new TextDecoder(encoding ?? "utf-8");
   const queue: ParsedSseEvent[] = [];
   // lastEventId accumulates across events per the SSE spec: if no id: is present
   // in an event block, the event inherits the most recently seen id.
@@ -25,8 +26,11 @@ export async function* parseSseStream(
       if (event.id !== undefined) {
         accumulatedLastEventId = event.id;
       }
+      // Default to "message" only when event field is absent (undefined). Empty string is passed through.
+      const type =
+        event.event === undefined ? "message" : event.event;
       queue.push({
-        type: event.event ?? "message",
+        type,
         data: event.data,
         lastEventId: accumulatedLastEventId,
       });

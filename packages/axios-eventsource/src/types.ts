@@ -10,6 +10,8 @@ export type AuthStrategy =
 export type ReconnectOptions = {
   initialDelayMs?: number;
   maxDelayMs?: number;
+  /** Maximum number of reconnect attempts after a failure. Omit for unlimited. */
+  maxRetries?: number;
 };
 
 /**
@@ -33,10 +35,9 @@ export type SseMessageEvent = {
 };
 
 /**
- * Event dispatched when the connection encounters an error or transport failure.
- * The `error` field carries the underlying error (Axios error, network failure, etc.).
+ * Shape of the error event (type + error). The dispatched event is an instance of {@link SseErrorEvent} (class).
  */
-export type SseErrorEvent = {
+export type SseErrorEventPayload = {
   readonly type: "error";
   readonly error: unknown;
 };
@@ -65,35 +66,21 @@ export type AxiosEventSourceOptions = Omit<
   reconnect?: ReconnectOptions;
   signal?: AbortSignal;
   withCredentials?: boolean;
+  /** Text decoding for the stream. Default `"utf-8"`. Passed to `TextDecoder`. */
+  encoding?: string;
+  /** Reject non-200 responses or responses whose Content-Type is not `text/event-stream`. Default `true`. */
+  rejectNonEventStream?: boolean;
   onopen?: (event: SseEvent) => void;
-  onerror?: (event: SseErrorEvent) => void;
+  onerror?: (event: SseErrorEventPayload) => void;
 };
 
-export type AxiosEventSourceLike = {
+export type AxiosEventSourceLike = EventTarget & {
   readonly readyState: AxiosEventSourceReadyState;
   readonly url: string;
   readonly withCredentials: boolean;
   onopen: ((event: SseEvent) => void) | null;
   onmessage: ((event: SseMessageEvent) => void) | null;
-  onerror: ((event: SseErrorEvent) => void) | null;
-  addEventListener(
-    type: "open",
-    listener: SseEventListener<SseEvent>,
-    options?: AddEventListenerOptions,
-  ): void;
-  addEventListener(
-    type: "error",
-    listener: SseEventListener<SseErrorEvent>,
-    options?: AddEventListenerOptions,
-  ): void;
-  addEventListener(
-    type: string,
-    listener: SseEventListener<SseMessageEvent>,
-    options?: AddEventListenerOptions,
-  ): void;
-  removeEventListener(type: "open", listener: SseEventListener<SseEvent>): void;
-  removeEventListener(type: "error", listener: SseEventListener<SseErrorEvent>): void;
-  removeEventListener(type: string, listener: SseEventListener<SseMessageEvent>): void;
+  onerror: ((event: SseErrorEventPayload) => void) | null;
   close(): void;
 };
 
