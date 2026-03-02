@@ -10,46 +10,6 @@
 This project intentionally challenges the idea that "Axios should not be used for SSE."
 If your app already relies on Axios for authentication, interceptors, base URLs, headers, retries, and environment-specific config, you should not need a separate networking stack just to consume event streams.
 
-## What's New (vs. a naive SSE client)
-
-### `Last-Event-ID` Recovery
-
-Most SSE clients stream events and forget them. This library persists the last received event id across reconnects and sends the `Last-Event-ID` header so the server can resume without gaps — exactly as the SSE spec requires.
-
-### Server-Driven Reconnect Delay
-
-The server can send a `retry:` frame to override the client's backoff base. This library respects it: `retry: 5000` means the client waits 5 seconds before reconnecting, regardless of the configured `initialDelayMs`.
-
-### `MessageEvent`-Like Payloads
-
-Every event has the same shape as the browser's native `MessageEvent`:
-
-```ts
-event.type        // event name ("message" by default)
-event.data        // payload string
-event.origin      // e.g. "https://api.example.com"
-event.lastEventId // always a string; "" when no id was received
-event.source      // null (per SSE spec)
-event.ports       // [] (per SSE spec)
-```
-
-### `EventTarget`-Like Listener API
-
-- `addEventListener("open", handler)` — fires when the connection opens
-- `addEventListener("error", handler)` — fires on transport failure, with `event.error` carrying the actual error
-- `addEventListener("ping", handler, { once: true })` — fires once then auto-removes
-- Object listeners with `handleEvent` are supported
-
-### Full Interface Parity
-
-```ts
-import { axiosEventSource, CONNECTING, OPEN, CLOSED } from "axios-eventsource";
-
-stream.readyState;      // CONNECTING (0), OPEN (1), or CLOSED (2)
-stream.url;             // the URL (after redirects when the adapter provides it)
-stream.withCredentials; // from options (default false)
-```
-
 ## Features
 
 - **Axios-native SSE client**: Reuse existing Axios instances, interceptors, defaults, and environment config.
@@ -139,7 +99,104 @@ const stream = axiosEventSource(client, "https://api.example.com/sse");
 axiosEventSource("https://api.example.com/sse", {
   auth: { type: "bearer", token: async () => getFreshAccessToken() },
 });
+
+// Or: auth: { type: "none" } | { type: "basic", username, password }
 ```
+
+## EventSource parity (details)
+
+### `Last-Event-ID` recovery
+
+When the server sends events with `id:` fields, the client persists the latest received id. On every reconnect, the `Last-Event-ID` header is sent so the server can resume without resending already-delivered events.
+
+```text
+Server sends: id: 42 → Client stores "42"
+Connection drops
+Client reconnects with: Last-Event-ID: 42
+Server resumes from id 43
+```
+
+The `lastEventId` field accumulates per the SSE spec: if an event has no `id:` field, it inherits the most recently seen id.
+
+### Server-driven reconnect delay (`retry:`)
+
+The server can override the reconnect delay by sending a `retry:` frame (e.g. `retry: 5000`). That becomes the new base for exponential backoff until the next successful connection.
+
+### `MessageEvent`-like payloads
+
+Every event has the same shape as the browser `MessageEvent`:
+
+```ts
+type SseMessageEvent = {
+  readonly type: string;        // event name, default "message"
+  readonly data: string;        // event payload
+  readonly origin: string;      // e.g. "https://api.example.com"
+  readonly lastEventId: string; // "" if no id was received
+  readonly source: null;       // always null for SSE (per spec)
+  readonly ports: readonly [];  // always empty for SSE (per spec)
+};
+```
+
+### `open` and `error` via `addEventListener`
+
+```ts
+stream.addEventListener("open", (event) => {
+  // event.type === "open"
+});
+
+stream.addEventListener("error", (event) => {
+  // event is SseErrorEvent; event.error has the underlying Axios/network error
+  console.error(event.error);
+});
+```
+
+### `EventTarget`-like listener semantics
+
+- `once: true` — listener fires once then is removed.
+- Object listeners with `handleEvent(event)` are supported.
+- The same listener reference added twice is only registered once (per spec).
+
+## API
+
+### `axiosEventSource(...)`
+
+Overloads:
+
+- `axiosEventSource(axiosInstance, url, options?)`
+- `axiosEventSource(url, options?)`
+
+Returns an object that extends `EventTarget` (`AxiosEventSourceLike`):
+
+- `readyState` — `CONNECTING` (0), `OPEN` (1), or `CLOSED` (2); use exported constants.
+- `url` — the URL (after redirects when the adapter provides it).
+- `withCredentials` — boolean (default `false`).
+- `onopen` — receives `Event` with `type: "open"`.
+- `onmessage` — receives `MessageEvent` (or `SseMessageEvent`-shaped).
+- `onerror` — receives `SseErrorEvent` (class with `.error` property).
+- `addEventListener(type, listener, options?)` — supports `"open"`, `"error"`, `"message"`, and any named event type; options: `{ once?: boolean }`.
+- `removeEventListener(type, listener)`
+- `close()`
+
+`options` supports standard Axios request config (with SSE-safe restrictions) plus:
+
+- `auth` — built-in auth strategy (`none`, `basic`, `bearer` with optional async token).
+- `reconnect` — `{ initialDelayMs?, maxDelayMs?, maxRetries? }`.
+- `encoding` — text decoding (default `"utf-8"`), passed to `TextDecoder`.
+- `rejectNonEventStream` — reject non–`text/event-stream` responses (default `true`).
+- `signal` — external `AbortSignal`.
+- `withCredentials` — boolean.
+- `onopen` — `(event: SseEvent) => void`
+- `onerror` — `(event: SseErrorEventPayload) => void`
+
+### Intentional deviations from native `EventSource`
+
+| Area | Native `EventSource` | `axios-eventsource` | Reason |
+| :--- | :--- | :--- | :--- |
+| Constructor | `new EventSource(url)` | `axiosEventSource(client, url, opts)` | Enables Axios instance injection |
+| `onerror` event | Bare `Event` | `SseErrorEvent` class with `error` field | Carries the actual error for debugging |
+| Network adapter | Browser native | Axios + Fetch adapter | Enables interceptors, auth, Node.js |
+| `CONNECTING/OPEN/CLOSED` | On constructor | Exported constants | Same values; import when needed |
+| Capture phase | Supported via options | Not supported | SSE listeners don't use capture |
 
 ## EventSource Compatibility Summary
 
