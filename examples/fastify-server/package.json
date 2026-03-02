@@ -9,6 +9,7 @@
     "test": "echo \"No tests yet\""
   },
   "dependencies": {
+    "@fastify/cors": "^11.2.0",
     "fastify": "^5.6.1",
     "fastify-file-router": "^2.6.1"
   },

@@ -15,6 +15,10 @@ export const route = defineRoute({
     } as const,
   },
   handler: async (request, reply) => {
+    const origin = typeof request.headers.origin === "string" ? request.headers.origin : undefined;
+    reply.raw.setHeader("Access-Control-Allow-Origin", origin ?? "*");
+    if (origin) reply.raw.setHeader("Vary", "Origin");
+
     reply.raw.writeHead(200, {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
