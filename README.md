@@ -20,7 +20,7 @@ Native `EventSource` only supports GET and can’t send custom headers (e.g. Aut
 ## Install
 
 ```sh
-pnpm add axios-eventsource axios
+pnpm add axios-eventsource axios zod
 ```
 
 ## Quick Start

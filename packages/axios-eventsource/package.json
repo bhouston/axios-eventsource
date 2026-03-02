@@ -1,6 +1,6 @@
 {
   "name": "axios-eventsource",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -16,8 +16,14 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "eventsource-parser": "^3.0.6"
+  },
+  "peerDependencies": {
+    "axios": ">=1",
+    "zod": ">=3"
+  },
+  "devDependencies": {
     "axios": "^1.11.0",
-    "eventsource-parser": "^3.0.6",
     "zod": "^4.3.6"
   }
 }

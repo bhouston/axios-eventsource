@@ -101,12 +101,13 @@ importers:
 
   packages/axios-eventsource:
     dependencies:
-      axios:
-        specifier: ^1.11.0
-        version: 1.13.6
       eventsource-parser:
         specifier: ^3.0.6
         version: 3.0.6
+    devDependencies:
+      axios:
+        specifier: ^1.11.0
+        version: 1.13.6
       zod:
         specifier: ^4.3.6
         version: 4.3.6
