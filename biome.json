@@ -5,7 +5,8 @@
       "packages/*/src/**/*",
       "examples/*/src/**/*",
       "**/package.json",
-      "**/vite*.config.ts"
+      "**/vite*.config.ts",
+      "!**/routeTree.gen.ts"
     ]
   },
   "formatter": {
@@ -17,16 +18,5 @@
     "rules": {
       "recommended": true
     }
-  },
-  "overrides": [
-    {
-      "includes": ["**/routeTree.gen.ts"],
-      "formatter": {
-        "enabled": false
-      },
-      "linter": {
-        "enabled": false
-      }
-    }
-  ]
+  }
 }
