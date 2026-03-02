@@ -344,8 +344,8 @@ describe("axios-eventsource integration", () => {
       return acc;
     }, {});
 
-    expect(viaCounts["onopen"]).toBeGreaterThanOrEqual(1);
-    expect(viaCounts["listener"]).toBeGreaterThanOrEqual(1);
+    expect(viaCounts.onopen).toBeGreaterThanOrEqual(1);
+    expect(viaCounts.listener).toBeGreaterThanOrEqual(1);
   });
 
   it("fires onerror and addEventListener(error) on transport failure", async () => {

@@ -1,5 +1,13 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.0.5/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.5/schema.json",
+  "files": {
+    "includes": [
+      "packages/*/src/**/*",
+      "examples/*/src/**/*",
+      "**/package.json",
+      "**/vite*.config.ts"
+    ]
+  },
   "formatter": {
     "indentStyle": "space",
     "lineWidth": 100
@@ -9,5 +17,16 @@
     "rules": {
       "recommended": true
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["**/routeTree.gen.ts"],
+      "formatter": {
+        "enabled": false
+      },
+      "linter": {
+        "enabled": false
+      }
+    }
+  ]
 }
