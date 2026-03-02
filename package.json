@@ -1,0 +1,25 @@
+{
+  "name": "axios-eventsource-monorepo",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "packageManager": "pnpm@10.17.0",
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "pnpm --parallel --filter axios-eventsource --filter example-express-server --filter example-fastify-server --filter example-website dev",
+    "test": "vitest run",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "make-release": "node scripts/make-release.mjs packages/axios-eventsource"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.3.4",
+    "@types/node": "^24.0.0",
+    "@vitest/coverage-v8": "^3.2.4",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

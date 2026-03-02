@@ -1,0 +1,14 @@
+{
+  "name": "axios-eventsource-tests",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "dev": "vitest",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "axios": "^1.11.0",
+    "axios-eventsource": "workspace:*"
+  }
+}
