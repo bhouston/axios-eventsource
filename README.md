@@ -160,6 +160,8 @@ stream.addEventListener("error", (event) => {
 
 ### `axiosEventSource(...)`
 
+Key exports: `axiosEventSource`, `CONNECTING`, `OPEN`, `CLOSED`, the `SseErrorEvent` class, and types `AxiosEventSourceLike`, `AxiosEventSourceOptions`, `ReconnectOptions`, `SseEvent`, `SseMessageEvent`, `SseErrorEventPayload`, `AuthStrategy`, `AddEventListenerOptions`, `SseEventListener`.
+
 Overloads:
 
 - `axiosEventSource(axiosInstance, url, options?)`
@@ -170,9 +172,9 @@ Returns an object that extends `EventTarget` (`AxiosEventSourceLike`):
 - `readyState` — `CONNECTING` (0), `OPEN` (1), or `CLOSED` (2); use exported constants.
 - `url` — the URL (after redirects when the adapter provides it).
 - `withCredentials` — boolean (default `false`).
-- `onopen` — receives `Event` with `type: "open"`.
-- `onmessage` — receives `MessageEvent` (or `SseMessageEvent`-shaped).
-- `onerror` — receives `SseErrorEvent` (class with `.error` property).
+- `onopen` — receives `SseEvent` (e.g. `Event` with `type: "open"`). Callback: `(event: SseEvent) => void`.
+- `onmessage` — receives `MessageEvent` (or `SseMessageEvent`-shaped). Callback: `(event: SseMessageEvent) => void`.
+- `onerror` — callback parameter type `SseErrorEventPayload`; at runtime the value is an `SseErrorEvent` instance (class with `.error`). Callback: `(event: SseErrorEventPayload) => void`.
 - `addEventListener(type, listener, options?)` — supports `"open"`, `"error"`, `"message"`, and any named event type; options: `{ once?: boolean }`.
 - `removeEventListener(type, listener)`
 - `close()`
