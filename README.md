@@ -158,6 +158,11 @@ pnpm test
 
 `pnpm dev` runs the library in watch mode, Express and Fastify SSE demos, and a demo site. See the repo for layout (`packages/axios-eventsource`, `examples/`, etc.).
 
+## Acknowledgments
+
+- **[eventsource-parser](https://github.com/rexxars/eventsource-parser)** — robust SSE stream parsing.
+- **[Zod](https://zod.dev)** — Schema validation for typed event data.
+
 ## Author
 
 [Ben Houston](https://benhouston3d.com), Sponsored by [Land of Assets](https://landofassets.com)
