@@ -1,0 +1,10 @@
+# Test files
+**/*.test.js
+**/*.test.d.ts
+**/*.test.js.map
+
+# Test fixtures
+**/fixtures/**
+
+
+*.buildinfo
