@@ -1,5 +1,6 @@
 import axios, { type AxiosInstance } from "axios";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import type { SseErrorEventPayload, SseMessageEvent } from "./index.js";
 import { axiosEventSource, CLOSED, CONNECTING, OPEN } from "./index.js";
 
@@ -524,6 +525,71 @@ describe("axiosEventSource", () => {
     expect(received[0]?.data).toBe("hello");
   });
 
+  it("addEventListener with schema parses and validates event data", async () => {
+    const requestMock = makeRequestMock(async () => ({
+      status: 200,
+      data: streamFromSsePayload('event: tick\ndata: {"count":2}\n\n'),
+    }));
+    const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
+    const schema = z.object({ count: z.number().int() });
+
+    const received: number[] = [];
+    const source = axiosEventSource(client, "/sse");
+    source.addEventListener("tick", (event) => received.push(event.data.count), { schema });
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    source.close();
+
+    expect(received).toEqual([2]);
+  });
+
+  it("addEventListener with schema calls onParseError for invalid JSON", async () => {
+    const requestMock = makeRequestMock(async () => ({
+      status: 200,
+      data: streamFromSsePayload("event: tick\ndata: {not-json}\n\n"),
+    }));
+    const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
+    const schema = z.object({ count: z.number().int() });
+
+    const parsed: number[] = [];
+    const parseErrors: unknown[] = [];
+    const source = axiosEventSource(client, "/sse");
+    source.addEventListener("tick", (event) => parsed.push(event.data.count), {
+      schema,
+      onParseError: (error) => parseErrors.push(error),
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    source.close();
+
+    expect(parsed).toHaveLength(0);
+    expect(parseErrors).toHaveLength(1);
+    expect(parseErrors[0]).toBeInstanceOf(SyntaxError);
+  });
+
+  it("addEventListener with schema calls onParseError for schema failures", async () => {
+    const requestMock = makeRequestMock(async () => ({
+      status: 200,
+      data: streamFromSsePayload('event: tick\ndata: {"count":"x"}\n\n'),
+    }));
+    const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
+    const schema = z.object({ count: z.number().int() });
+
+    const parsed: number[] = [];
+    const parseErrors: unknown[] = [];
+    const source = axiosEventSource(client, "/sse");
+    source.addEventListener("tick", (event) => parsed.push(event.data.count), {
+      schema,
+      onParseError: (error) => parseErrors.push(error),
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    source.close();
+
+    expect(parsed).toHaveLength(0);
+    expect(parseErrors).toHaveLength(1);
+  });
+
   it("addEventListener with once:true fires only once", async () => {
     let callCount = 0;
     const requestMock = vi.fn((_config: unknown) => {
@@ -616,6 +682,26 @@ describe("axiosEventSource", () => {
     expect(received).toHaveLength(0);
   });
 
+  it("removeEventListener works for listeners registered with schema", async () => {
+    const requestMock = makeRequestMock(async () => ({
+      status: 200,
+      data: streamFromSsePayload('event: tick\ndata: {"count":1}\n\n'),
+    }));
+    const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
+    const schema = z.object({ count: z.number().int() });
+
+    const received: number[] = [];
+    const listener = (event: SseMessageEvent<{ count: number }>) => received.push(event.data.count);
+    const source = axiosEventSource(client, "/sse");
+    source.addEventListener("tick", listener, { schema });
+    source.removeEventListener("tick", listener);
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    source.close();
+
+    expect(received).toHaveLength(0);
+  });
+
   it("removeEventListener is a no-op when type has no listeners", () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
@@ -625,6 +711,19 @@ describe("axiosEventSource", () => {
 
     const source = axiosEventSource(client, "/sse");
     expect(() => source.removeEventListener("nonexistent", () => {})).not.toThrow();
+    source.close();
+  });
+
+  it("types: onParseError cannot be provided without schema", () => {
+    const requestMock = makeRequestMock(async () => ({
+      status: 200,
+      data: streamFromSsePayload(""),
+    }));
+    const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
+    const source = axiosEventSource(client, "/sse");
+
+    // @ts-expect-error onParseError is only valid when schema is provided.
+    source.addEventListener("tick", () => {}, { onParseError: () => {} });
     source.close();
   });
 

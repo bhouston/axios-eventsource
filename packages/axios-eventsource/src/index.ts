@@ -6,8 +6,10 @@ import type {
   AxiosEventSourceLike,
   AxiosEventSourceOptions,
   AxiosEventSourceReadyState,
+  SchemaAddEventListenerOptions,
   SseErrorEventPayload,
   SseEvent,
+  SseEventListener,
   SseMessageEvent,
 } from "./types.js";
 
@@ -94,6 +96,12 @@ function isEventStreamResponse(response: AxiosResponse): boolean {
   return base === "text/event-stream";
 }
 
+function isSchemaAddEventListenerOptions(
+  options: boolean | AddEventListenerOptions | undefined,
+): options is SchemaAddEventListenerOptions<unknown> & AddEventListenerOptions {
+  return typeof options === "object" && options !== null && "schema" in options;
+}
+
 /**
  * SSE client that extends EventTarget and matches the EventSource API surface.
  * Uses Axios for the request so interceptors, auth, and config are reused.
@@ -108,6 +116,7 @@ export class AxiosEventSource extends EventTarget {
   private _onopen: ((event: SseEvent) => void) | null = null;
   private _onmessage: ((event: SseMessageEvent) => void) | null = null;
   private _onerror: ((event: SseErrorEventPayload) => void) | null = null;
+  private _typedListenerWrappers = new Map<string, WeakMap<object, EventListener>>();
 
   constructor(
     private readonly _client: AxiosInstance,
@@ -160,6 +169,78 @@ export class AxiosEventSource extends EventTarget {
       this._abortController.abort();
     }
     this._readyState = READY_STATE_CLOSED;
+  }
+
+  override addEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: boolean | AddEventListenerOptions,
+  ): void {
+    if (listener === null) {
+      return;
+    }
+
+    if (isSchemaAddEventListenerOptions(options)) {
+      const listenerKey = listener as unknown as object;
+      const wrappersByType =
+        this._typedListenerWrappers.get(type) ?? new WeakMap<object, EventListener>();
+      this._typedListenerWrappers.set(type, wrappersByType);
+
+      const existingWrapper = wrappersByType.get(listenerKey);
+      if (existingWrapper !== undefined) {
+        super.addEventListener(type, existingWrapper, options);
+        return;
+      }
+
+      const wrappedListener: EventListener = (event: Event) => {
+        const rawEvent = event as unknown as SseMessageEvent;
+        const typedListener = listener as unknown as SseEventListener<SseMessageEvent<unknown>>;
+        try {
+          const rawData = JSON.parse(rawEvent.data);
+          const parsedData = options.schema.parse(rawData);
+          const parsedEvent = {
+            ...(rawEvent as SseMessageEvent),
+            data: parsedData,
+          } as SseMessageEvent<unknown>;
+          if (typeof typedListener === "function") {
+            typedListener(parsedEvent);
+            return;
+          }
+          typedListener.handleEvent(parsedEvent);
+        } catch (error) {
+          options.onParseError?.(error, rawEvent);
+          if (!options.onParseError) {
+            throw error;
+          }
+        }
+      };
+
+      wrappersByType.set(listenerKey, wrappedListener);
+      super.addEventListener(type, wrappedListener, options);
+      return;
+    }
+
+    super.addEventListener(type, listener, options);
+  }
+
+  override removeEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: boolean | EventListenerOptions,
+  ): void {
+    if (listener === null) {
+      return;
+    }
+
+    const wrappersByType = this._typedListenerWrappers.get(type);
+    const wrapper = wrappersByType?.get(listener as unknown as object);
+    if (wrapper !== undefined) {
+      super.removeEventListener(type, wrapper, options);
+      wrappersByType?.delete(listener as unknown as object);
+      return;
+    }
+
+    super.removeEventListener(type, listener, options);
   }
 
   /** Called by the factory to start the connection loop. */
@@ -320,6 +401,7 @@ export type {
   AxiosEventSourceLike,
   AxiosEventSourceOptions,
   ReconnectOptions,
+  SchemaAddEventListenerOptions,
   SseErrorEventPayload,
   SseEvent,
   SseEventListener,

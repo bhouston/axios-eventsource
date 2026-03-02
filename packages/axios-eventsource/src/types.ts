@@ -1,4 +1,5 @@
 import type { AxiosInstance, AxiosRequestConfig, RawAxiosRequestHeaders } from "axios";
+import type { ZodType } from "zod";
 
 export type AxiosEventSourceReadyState = 0 | 1 | 2;
 
@@ -25,9 +26,9 @@ export type SseEvent = {
  * Mirrors the browser MessageEvent for SSE message events.
  * `source` is always null and `ports` is always empty for SSE streams.
  */
-export type SseMessageEvent = {
+export type SseMessageEvent<T = string> = {
   readonly type: string;
-  readonly data: string;
+  readonly data: T;
   readonly origin: string;
   readonly lastEventId: string;
   readonly source: null;
@@ -50,12 +51,16 @@ export type AddEventListenerOptions = {
   once?: boolean;
 };
 
+export type SchemaAddEventListenerOptions<T> = AddEventListenerOptions & {
+  schema: ZodType<T>;
+  onParseError?: (error: unknown, rawEvent: SseMessageEvent) => void;
+};
+
 /**
  * A listener that is either a callback function or an object with a `handleEvent` method,
  * matching the browser EventListenerOrEventListenerObject pattern.
  */
 export type SseEventListener<T> = ((event: T) => void) | { handleEvent(event: T): void };
-
 export type AxiosEventSourceOptions = Omit<
   AxiosRequestConfig,
   "adapter" | "auth" | "decompress" | "method" | "responseType" | "signal"
@@ -81,6 +86,21 @@ export type AxiosEventSourceLike = EventTarget & {
   onopen: ((event: SseEvent) => void) | null;
   onmessage: ((event: SseMessageEvent) => void) | null;
   onerror: ((event: SseErrorEventPayload) => void) | null;
+  addEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: boolean | AddEventListenerOptions,
+  ): void;
+  addEventListener<T>(
+    type: string,
+    listener: EventListener & ((event: SseMessageEvent<T>) => void),
+    options: SchemaAddEventListenerOptions<T>,
+  ): void;
+  removeEventListener(
+    type: string,
+    listener: EventListenerOrEventListenerObject | null,
+    options?: boolean | EventListenerOptions,
+  ): void;
   close(): void;
 };
 

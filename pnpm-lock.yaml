@@ -79,6 +79,9 @@ importers:
       vite-tsconfig-paths:
         specifier: ^6.0.2
         version: 6.1.1(typescript@5.9.3)(vite@7.3.1(@types/node@24.11.0)(tsx@4.21.0))
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
     devDependencies:
       '@types/react':
         specifier: ^19.2.0
@@ -104,6 +107,9 @@ importers:
       eventsource-parser:
         specifier: ^3.0.6
         version: 3.0.6
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
 
   packages/axios-eventsource-tests:
     dependencies:

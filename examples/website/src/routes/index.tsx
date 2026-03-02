@@ -8,6 +8,7 @@ import {
   type SseMessageEvent,
 } from "axios-eventsource";
 import { useEffect, useRef, useState } from "react";
+import { z } from "zod";
 
 type AuthKind = "none" | "basic" | "bearer";
 type MethodKind = "GET" | "POST";
@@ -44,6 +45,14 @@ type SourceInfo = {
   withCredentials: boolean;
   lastEventId: string;
 };
+
+const tickPayloadSchema = z.object({
+  count: z.number().int().optional(),
+  kind: z.string().optional(),
+  id: z.number().int().optional(),
+  resumedFrom: z.string().nullable().optional(),
+  retrySetByServer: z.number().int().optional(),
+});
 
 function IndexPage() {
   const [auth, setAuth] = useState<AuthKind>("none");
@@ -120,19 +129,14 @@ function IndexPage() {
       },
     });
 
-    sse.addEventListener("tick", (event: SseMessageEvent) => {
-      setSourceInfo((prev) => ({
-        ...prev,
-        [source]: prev[source] ? { ...prev[source], lastEventId: event.lastEventId } : null,
-      }));
-      try {
-        const parsed = JSON.parse(event.data) as {
-          count?: number;
-          kind?: string;
-          id?: number;
-          resumedFrom?: string | null;
-          retrySetByServer?: number;
-        };
+    sse.addEventListener(
+      "tick",
+      (event) => {
+        setSourceInfo((prev) => ({
+          ...prev,
+          [source]: prev[source] ? { ...prev[source], lastEventId: event.lastEventId } : null,
+        }));
+        const parsed = event.data;
         let logLine = `${source} tick`;
         if (parsed.count !== undefined) logLine += ` count=${parsed.count}`;
         if (parsed.id !== undefined) logLine += ` id=${parsed.id}`;
@@ -144,10 +148,14 @@ function IndexPage() {
         if (event.lastEventId) logLine += ` lastEventId=${event.lastEventId}`;
         if (event.origin) logLine += ` origin=${event.origin}`;
         addLog(logLine);
-      } catch {
-        addLog(`${source} tick parse error: ${event.data}`);
-      }
-    });
+      },
+      {
+        schema: tickPayloadSchema,
+        onParseError: (_error, rawEvent) => {
+          addLog(`${source} tick parse error: ${rawEvent.data}`);
+        },
+      },
+    );
 
     sse.addEventListener("edge-case", (event: SseMessageEvent) => {
       addLog(`${source} edge-case event: ${event.data}`);

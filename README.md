@@ -56,6 +56,39 @@ stream.addEventListener("tick", (event) => {
 // stream.close();
 ```
 
+## Typed + validated event data (Zod)
+
+When you pass a `schema` in the third `addEventListener` parameter, the library parses
+`event.data` with `JSON.parse` and validates it with Zod before invoking your listener.
+
+```ts
+import { z } from "zod";
+
+const serverEventDataSchemas = {
+  "asset:created": z.object({
+    asset: z.object({ id: z.number().int(), name: z.string() }),
+  }),
+  "asset:deleted": z.object({
+    assetId: z.number().int(),
+    orgName: z.string(),
+    projectName: z.string(),
+    assetName: z.string(),
+  }),
+} as const;
+
+stream.addEventListener("asset:created", (event) => {
+  // event.data is typed as { asset: { id: number; name: string } }
+  console.log(event.data.asset.id);
+}, {
+  schema: serverEventDataSchemas["asset:created"],
+  onParseError: (error, rawEvent) => {
+    console.error("Invalid SSE payload for", rawEvent.type, error);
+  },
+});
+```
+
+Without `schema`, behavior is unchanged and `event.data` remains a raw string.
+
 ## Authentication
 
 Use the same Axios client and interceptors you already have:
