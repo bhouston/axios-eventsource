@@ -1,6 +1,6 @@
-import axios, { type AxiosInstance, type AxiosResponse, type RawAxiosRequestHeaders } from "axios";
-import { parseSseStream } from "./parseSseStream.js";
-import { getNextDelay, getReconnectConfig, sleepWithAbort } from "./reconnect.js";
+import axios, { type AxiosInstance, type AxiosResponse, type RawAxiosRequestHeaders } from 'axios';
+import { parseSseStream } from './parseSseStream.js';
+import { getNextDelay, getReconnectConfig, sleepWithAbort } from './reconnect.js';
 import type {
   AxiosEventSourceFactory,
   AxiosEventSourceLike,
@@ -11,7 +11,7 @@ import type {
   SseEvent,
   SseEventListener,
   SseMessageEvent,
-} from "./types.js";
+} from './types.js';
 
 /** ReadyState constant: connection not yet open. */
 export const CONNECTING = 0 as const;
@@ -31,7 +31,7 @@ const READY_STATE_CLOSED = CLOSED;
 export class SseErrorEvent extends Event {
   readonly error: unknown;
   constructor(error: unknown) {
-    super("error");
+    super('error');
     this.error = error;
   }
 }
@@ -39,33 +39,31 @@ export class SseErrorEvent extends Event {
 function isAxiosInstance(value: unknown): value is AxiosInstance {
   const candidate = value as AxiosInstance;
   return (
-    (typeof value === "function" || (typeof value === "object" && value !== null)) &&
-    typeof candidate.request === "function" &&
-    typeof candidate.get === "function"
+    (typeof value === 'function' || (typeof value === 'object' && value !== null)) &&
+    typeof candidate.request === 'function' &&
+    typeof candidate.get === 'function'
   );
 }
 
 function toBase64(value: string): string {
-  if (typeof btoa === "function") {
+  if (typeof btoa === 'function') {
     return btoa(value);
   }
-  return Buffer.from(value).toString("base64");
+  return Buffer.from(value).toString('base64');
 }
 
-async function resolveAuthHeaders(
-  options?: AxiosEventSourceOptions,
-): Promise<RawAxiosRequestHeaders> {
+async function resolveAuthHeaders(options?: AxiosEventSourceOptions): Promise<RawAxiosRequestHeaders> {
   const auth = options?.auth;
-  if (!auth || auth.type === "none") {
+  if (!auth || auth.type === 'none') {
     return {};
   }
 
-  if (auth.type === "basic") {
+  if (auth.type === 'basic') {
     const token = toBase64(`${auth.username}:${auth.password}`);
     return { Authorization: `Basic ${token}` };
   }
 
-  const token = typeof auth.token === "function" ? await auth.token() : auth.token;
+  const token = typeof auth.token === 'function' ? await auth.token() : auth.token;
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
@@ -73,7 +71,7 @@ function getOrigin(url: string): string {
   try {
     return new URL(url).origin;
   } catch {
-    return "";
+    return '';
   }
 }
 
@@ -83,23 +81,23 @@ function getResponseUrl(response: AxiosResponse): string | undefined {
     url?: string;
     request?: { url?: string; responseURL?: string };
   };
-  if (typeof r.url === "string") return r.url;
-  if (typeof r.request?.responseURL === "string") return r.request.responseURL;
-  if (typeof r.request?.url === "string") return r.request.url;
+  if (typeof r.url === 'string') return r.url;
+  if (typeof r.request?.responseURL === 'string') return r.request.responseURL;
+  if (typeof r.request?.url === 'string') return r.request.url;
   return undefined;
 }
 
 function isEventStreamResponse(response: AxiosResponse): boolean {
-  const ct = response.headers?.["content-type"];
-  if (typeof ct !== "string") return false;
-  const base = ct.split(";")[0]?.trim().toLowerCase() ?? "";
-  return base === "text/event-stream";
+  const ct = response.headers?.['content-type'];
+  if (typeof ct !== 'string') return false;
+  const base = ct.split(';')[0]?.trim().toLowerCase() ?? '';
+  return base === 'text/event-stream';
 }
 
 function isSchemaAddEventListenerOptions(
   options: boolean | AddEventListenerOptions | undefined,
 ): options is SchemaAddEventListenerOptions<unknown> & AddEventListenerOptions {
-  return typeof options === "object" && options !== null && "schema" in options;
+  return typeof options === 'object' && options !== null && 'schema' in options;
 }
 
 /**
@@ -182,8 +180,7 @@ export class AxiosEventSource extends EventTarget {
 
     if (isSchemaAddEventListenerOptions(options)) {
       const listenerKey = listener as unknown as object;
-      const wrappersByType =
-        this._typedListenerWrappers.get(type) ?? new WeakMap<object, EventListener>();
+      const wrappersByType = this._typedListenerWrappers.get(type) ?? new WeakMap<object, EventListener>();
       this._typedListenerWrappers.set(type, wrappersByType);
 
       const existingWrapper = wrappersByType.get(listenerKey);
@@ -202,7 +199,7 @@ export class AxiosEventSource extends EventTarget {
             ...(rawEvent as SseMessageEvent),
             data: parsedData,
           } as SseMessageEvent<unknown>;
-          if (typeof typedListener === "function") {
+          if (typeof typedListener === 'function') {
             typedListener(parsedEvent);
             return;
           }
@@ -248,7 +245,7 @@ export class AxiosEventSource extends EventTarget {
     const options = this._options;
     const reconnect = getReconnectConfig(options.reconnect);
     const rejectNonEventStream = options.rejectNonEventStream !== false;
-    const encoding = options.encoding ?? "utf-8";
+    const encoding = options.encoding ?? 'utf-8';
 
     const {
       auth: _ignoredAuth,
@@ -261,7 +258,7 @@ export class AxiosEventSource extends EventTarget {
       ...requestOptions
     } = options;
 
-    const method = options.method ?? "GET";
+    const method = options.method ?? 'GET';
     const url = this._initialUrl;
 
     // If external signal is already aborted, close immediately.
@@ -269,10 +266,10 @@ export class AxiosEventSource extends EventTarget {
       this.close();
       return;
     }
-    options.signal?.addEventListener("abort", () => this.close(), { once: true });
+    options.signal?.addEventListener('abort', () => this.close(), { once: true });
 
     const connect = async (): Promise<void> => {
-      let lastEventId = "";
+      let lastEventId = '';
       let baseReconnectDelay = reconnect.initialDelayMs;
       let reconnectDelay = baseReconnectDelay;
       let retryCount = 0;
@@ -285,14 +282,14 @@ export class AxiosEventSource extends EventTarget {
             url,
             ...requestOptions,
             headers: {
-              Accept: "text/event-stream",
-              "Cache-Control": "no-cache",
-              ...(options.headers ?? {}),
+              Accept: 'text/event-stream',
+              'Cache-Control': 'no-cache',
+              ...options.headers,
               ...authHeaders,
-              ...(lastEventId !== "" ? { "Last-Event-ID": lastEventId } : {}),
+              ...(lastEventId !== '' ? { 'Last-Event-ID': lastEventId } : {}),
             },
-            responseType: "stream",
-            adapter: "fetch",
+            responseType: 'stream',
+            adapter: 'fetch',
             decompress: false,
             signal: this._abortController.signal,
           });
@@ -303,7 +300,7 @@ export class AxiosEventSource extends EventTarget {
 
           if (rejectNonEventStream && !isEventStreamResponse(response)) {
             throw new Error(
-              `Expected Content-Type text/event-stream, got ${response.headers?.["content-type"] ?? "unknown"}`,
+              `Expected Content-Type text/event-stream, got ${response.headers?.['content-type'] ?? 'unknown'}`,
             );
           }
 
@@ -317,7 +314,7 @@ export class AxiosEventSource extends EventTarget {
           reconnectDelay = baseReconnectDelay;
           retryCount = 0;
 
-          const openEvent = new Event("open");
+          const openEvent = new Event('open');
           this.dispatchEvent(openEvent);
           this._onopen?.(openEvent as SseEvent);
 
@@ -343,7 +340,7 @@ export class AxiosEventSource extends EventTarget {
               lastEventId: parsed.lastEventId,
             });
 
-            if (parsed.type === "message") {
+            if (parsed.type === 'message') {
               this._onmessage?.(messageEvent as unknown as SseMessageEvent);
             }
             this.dispatchEvent(messageEvent);
@@ -386,9 +383,7 @@ export const axiosEventSource: AxiosEventSourceFactory = (
 ): AxiosEventSourceLike => {
   const client = isAxiosInstance(clientOrUrl) ? clientOrUrl : axios.create();
   const url = isAxiosInstance(clientOrUrl) ? (urlOrOptions as string) : clientOrUrl;
-  const options = isAxiosInstance(clientOrUrl)
-    ? maybeOptions
-    : (urlOrOptions as AxiosEventSourceOptions | undefined);
+  const options = isAxiosInstance(clientOrUrl) ? maybeOptions : (urlOrOptions as AxiosEventSourceOptions | undefined);
 
   const instance = new AxiosEventSource(client, url, options);
   instance._start();
@@ -406,4 +401,4 @@ export type {
   SseEvent,
   SseEventListener,
   SseMessageEvent,
-} from "./types.js";
+} from './types.js';

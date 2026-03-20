@@ -1,4 +1,4 @@
-import { createParser, type EventSourceMessage } from "eventsource-parser";
+import { createParser, type EventSourceMessage } from 'eventsource-parser';
 
 export type ParsedSseEvent = {
   type: string;
@@ -16,18 +16,18 @@ export async function* parseSseStream(
   encoding?: string,
 ): AsyncGenerator<ParsedSseEvent> {
   const reader = stream.getReader();
-  const decoder = new TextDecoder(encoding ?? "utf-8");
+  const decoder = new TextDecoder(encoding ?? 'utf-8');
   const queue: ParsedSseEvent[] = [];
   // lastEventId accumulates across events per the SSE spec: if no id: is present
   // in an event block, the event inherits the most recently seen id.
-  let accumulatedLastEventId = "";
+  let accumulatedLastEventId = '';
   const parser = createParser({
     onEvent(event: EventSourceMessage) {
       if (event.id !== undefined) {
         accumulatedLastEventId = event.id;
       }
       // Default to "message" only when event field is absent (undefined). Empty string is passed through.
-      const type = event.event === undefined ? "message" : event.event;
+      const type = event.event === undefined ? 'message' : event.event;
       queue.push({
         type,
         data: event.data,

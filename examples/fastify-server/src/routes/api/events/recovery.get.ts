@@ -1,4 +1,4 @@
-import { defineRoute } from "fastify-file-router";
+import { defineRoute } from 'fastify-file-router';
 
 /**
  * Last-Event-ID recovery demo:
@@ -9,23 +9,23 @@ import { defineRoute } from "fastify-file-router";
 export const route = defineRoute({
   schema: {
     querystring: {
-      type: "object",
+      type: 'object',
       properties: {},
       additionalProperties: false,
     } as const,
   },
   handler: async (request, reply) => {
-    const origin = typeof request.headers.origin === "string" ? request.headers.origin : undefined;
-    reply.raw.setHeader("Access-Control-Allow-Origin", origin ?? "*");
-    if (origin) reply.raw.setHeader("Vary", "Origin");
+    const origin = typeof request.headers.origin === 'string' ? request.headers.origin : undefined;
+    reply.raw.setHeader('Access-Control-Allow-Origin', origin ?? '*');
+    if (origin) reply.raw.setHeader('Vary', 'Origin');
 
     reply.raw.writeHead(200, {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
     });
 
-    const lastEventIdHeader = request.headers["last-event-id"] as string | undefined;
+    const lastEventIdHeader = request.headers['last-event-id'] as string | undefined;
     const startFrom = lastEventIdHeader ? Number.parseInt(lastEventIdHeader, 10) + 1 : 1;
 
     let count = startFrom;
@@ -35,7 +35,7 @@ export const route = defineRoute({
     const timer = setInterval(() => {
       emitted += 1;
       const payload = {
-        source: "fastify",
+        source: 'fastify',
         id: count,
         timestamp: new Date().toISOString(),
         resumedFrom: lastEventIdHeader ?? null,
@@ -49,7 +49,7 @@ export const route = defineRoute({
       }
     }, 500);
 
-    request.raw.on("close", () => {
+    request.raw.on('close', () => {
       clearInterval(timer);
       reply.raw.end();
     });

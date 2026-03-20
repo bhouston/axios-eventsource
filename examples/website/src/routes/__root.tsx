@@ -1,11 +1,11 @@
-import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
+import { createRootRoute, HeadContent, Outlet, Scripts } from '@tanstack/react-router';
 
 export const Route = createRootRoute({
   head: () => ({
     meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "axios-eventsource demo" },
+      { charSet: 'utf-8' },
+      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+      { title: 'axios-eventsource demo' },
     ],
   }),
   shellComponent: RootDocument,
@@ -18,7 +18,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body style={{ margin: 0, background: "#f8fafc" }}>
+      <body style={{ margin: 0, background: '#f8fafc' }}>
         {children}
         <Scripts />
       </body>

@@ -1,12 +1,12 @@
-import type { AxiosInstance, AxiosRequestConfig, RawAxiosRequestHeaders } from "axios";
-import type { ZodType } from "zod";
+import type { AxiosInstance, AxiosRequestConfig, RawAxiosRequestHeaders } from 'axios';
+import type { ZodType } from 'zod';
 
 export type AxiosEventSourceReadyState = 0 | 1 | 2;
 
 export type AuthStrategy =
-  | { type: "none" }
-  | { type: "basic"; username: string; password: string }
-  | { type: "bearer"; token: string | (() => string | Promise<string>) };
+  | { type: 'none' }
+  | { type: 'basic'; username: string; password: string }
+  | { type: 'bearer'; token: string | (() => string | Promise<string>) };
 
 export type ReconnectOptions = {
   initialDelayMs?: number;
@@ -39,7 +39,7 @@ export type SseMessageEvent<T = string> = {
  * Shape of the error event (type + error). The dispatched event is an instance of {@link SseErrorEvent} (class).
  */
 export type SseErrorEventPayload = {
-  readonly type: "error";
+  readonly type: 'error';
   readonly error: unknown;
 };
 
@@ -63,11 +63,11 @@ export type SchemaAddEventListenerOptions<T> = AddEventListenerOptions & {
 export type SseEventListener<T> = ((event: T) => void) | { handleEvent(event: T): void };
 export type AxiosEventSourceOptions = Omit<
   AxiosRequestConfig,
-  "adapter" | "auth" | "decompress" | "method" | "responseType" | "signal"
+  'adapter' | 'auth' | 'decompress' | 'method' | 'responseType' | 'signal'
 > & {
   auth?: AuthStrategy;
   headers?: RawAxiosRequestHeaders;
-  method?: "GET" | "POST";
+  method?: 'GET' | 'POST';
   reconnect?: ReconnectOptions;
   signal?: AbortSignal;
   withCredentials?: boolean;

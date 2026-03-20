@@ -1,8 +1,8 @@
-import axios, { type AxiosInstance } from "axios";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { z } from "zod";
-import type { SseErrorEventPayload, SseMessageEvent } from "./index.js";
-import { axiosEventSource, CLOSED, CONNECTING, OPEN } from "./index.js";
+import axios, { type AxiosInstance } from 'axios';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { z } from 'zod';
+import type { SseErrorEventPayload, SseMessageEvent } from './index.js';
+import { axiosEventSource, CLOSED, CONNECTING, OPEN } from './index.js';
 
 function streamFromSsePayload(payload: string): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
@@ -17,121 +17,117 @@ function streamFromSsePayload(payload: string): ReadableStream<Uint8Array> {
 
 // Helper to create a mock that accepts a config argument so mock.calls[0]?.[0] is well-typed.
 // Ensures 200 + stream responses include Content-Type for rejectNonEventStream (default true).
-function makeRequestMock(
-  result: () => Promise<{ status: number; data: unknown; headers?: Record<string, string> }>,
-) {
+function makeRequestMock(result: () => Promise<{ status: number; data: unknown; headers?: Record<string, string> }>) {
   return vi.fn(async (_config: unknown) => {
     const res = await result();
     if (res.status === 200 && res.data != null) {
       return {
         ...res,
-        headers: { ...res.headers, "content-type": "text/event-stream" },
+        headers: { ...res.headers, 'content-type': 'text/event-stream' },
       };
     }
     return res;
   });
 }
 
-describe("axiosEventSource", () => {
-  it("supports a provided axios instance", async () => {
+describe('axiosEventSource', () => {
+  it('supports a provided axios instance', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload("data: hello\n\n"),
+      data: streamFromSsePayload('data: hello\n\n'),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
     const received: string[] = [];
-    const source = axiosEventSource(client, "/sse");
+    const source = axiosEventSource(client, '/sse');
     source.onmessage = (event) => received.push(event.data);
 
     await new Promise((resolve) => setTimeout(resolve, 5));
     source.close();
 
     expect(requestMock).toHaveBeenCalled();
-    expect(received).toContain("hello");
+    expect(received).toContain('hello');
   });
 
-  it("exposes url as a readonly property", async () => {
+  it('exposes url as a readonly property', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload(""),
+      data: streamFromSsePayload(''),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
-    const source = axiosEventSource(client, "/sse");
-    expect(source.url).toBe("/sse");
+    const source = axiosEventSource(client, '/sse');
+    expect(source.url).toBe('/sse');
     source.close();
   });
 
-  it("exposes withCredentials as false by default", async () => {
+  it('exposes withCredentials as false by default', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload(""),
+      data: streamFromSsePayload(''),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
-    const source = axiosEventSource(client, "/sse");
+    const source = axiosEventSource(client, '/sse');
     expect(source.withCredentials).toBe(false);
     source.close();
   });
 
-  it("exposes withCredentials as true when set in options", async () => {
+  it('exposes withCredentials as true when set in options', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload(""),
+      data: streamFromSsePayload(''),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
-    const source = axiosEventSource(client, "/sse", { withCredentials: true });
+    const source = axiosEventSource(client, '/sse', { withCredentials: true });
     expect(source.withCredentials).toBe(true);
     source.close();
   });
 
-  it("sends bearer auth from options", async () => {
+  it('sends bearer auth from options', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload("event: ping\ndata: ok\n\n"),
+      data: streamFromSsePayload('event: ping\ndata: ok\n\n'),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
-    const source = axiosEventSource(client, "/sse", {
-      auth: { type: "bearer", token: "abc123" },
+    const source = axiosEventSource(client, '/sse', {
+      auth: { type: 'bearer', token: 'abc123' },
     });
 
     await new Promise((resolve) => setTimeout(resolve, 5));
     source.close();
 
-    const config = requestMock.mock.calls[0]?.[0] as
-      | { headers?: { Authorization?: string } }
-      | undefined;
-    expect(config?.headers?.Authorization).toBe("Bearer abc123");
+    const config = requestMock.mock.calls[0]?.[0] as { headers?: { Authorization?: string } } | undefined;
+    expect(config?.headers?.Authorization).toBe('Bearer abc123');
   });
 
-  it("uses GET by default", async () => {
+  it('uses GET by default', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload("data: ok\n\n"),
+      data: streamFromSsePayload('data: ok\n\n'),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
-    const source = axiosEventSource(client, "/sse");
+    const source = axiosEventSource(client, '/sse');
 
     await new Promise((resolve) => setTimeout(resolve, 5));
     source.close();
 
     const config = requestMock.mock.calls[0]?.[0] as { method?: string } | undefined;
-    expect(config?.method).toBe("GET");
+    expect(config?.method).toBe('GET');
   });
 
-  it("uses POST and passes body when method is POST", async () => {
+  it('uses POST and passes body when method is POST', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload("data: hello\n\n"),
+      data: streamFromSsePayload('data: hello\n\n'),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
     const received: string[] = [];
-    const source = axiosEventSource(client, "/sse", {
-      method: "POST",
-      data: { prompt: "hello" },
+    const source = axiosEventSource(client, '/sse', {
+      method: 'POST',
+      data: { prompt: 'hello' },
     });
     source.onmessage = (event) => received.push(event.data);
 
@@ -139,70 +135,64 @@ describe("axiosEventSource", () => {
     source.close();
 
     expect(requestMock).toHaveBeenCalled();
-    const config = requestMock.mock.calls[0]?.[0] as
-      | { method?: string; data?: unknown }
-      | undefined;
-    expect(config?.method).toBe("POST");
-    expect(config?.data).toEqual({ prompt: "hello" });
-    expect(received).toContain("hello");
+    const config = requestMock.mock.calls[0]?.[0] as { method?: string; data?: unknown } | undefined;
+    expect(config?.method).toBe('POST');
+    expect(config?.data).toEqual({ prompt: 'hello' });
+    expect(received).toContain('hello');
   });
 
-  it("sends basic auth header", async () => {
+  it('sends basic auth header', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload("data: ok\n\n"),
+      data: streamFromSsePayload('data: ok\n\n'),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
-    const source = axiosEventSource(client, "/sse", {
-      auth: { type: "basic", username: "demo", password: "secret" },
+    const source = axiosEventSource(client, '/sse', {
+      auth: { type: 'basic', username: 'demo', password: 'secret' },
     });
 
     await new Promise((resolve) => setTimeout(resolve, 10));
     source.close();
 
-    const config = requestMock.mock.calls[0]?.[0] as
-      | { headers?: { Authorization?: string } }
-      | undefined;
-    expect(config?.headers?.Authorization).toBe(`Basic ${btoa("demo:secret")}`);
+    const config = requestMock.mock.calls[0]?.[0] as { headers?: { Authorization?: string } } | undefined;
+    expect(config?.headers?.Authorization).toBe(`Basic ${btoa('demo:secret')}`);
   });
 
-  it("uses Buffer.from for base64 when btoa is unavailable", async () => {
-    vi.stubGlobal("btoa", undefined);
+  it('uses Buffer.from for base64 when btoa is unavailable', async () => {
+    vi.stubGlobal('btoa', undefined);
     try {
       const requestMock = makeRequestMock(async () => ({
         status: 200,
-        data: streamFromSsePayload("data: ok\n\n"),
+        data: streamFromSsePayload('data: ok\n\n'),
       }));
       const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
-      const source = axiosEventSource(client, "/sse", {
-        auth: { type: "basic", username: "user", password: "pass" },
+      const source = axiosEventSource(client, '/sse', {
+        auth: { type: 'basic', username: 'user', password: 'pass' },
       });
 
       await new Promise((resolve) => setTimeout(resolve, 10));
       source.close();
 
-      const config = requestMock.mock.calls[0]?.[0] as
-        | { headers?: { Authorization?: string } }
-        | undefined;
-      const expected = Buffer.from("user:pass").toString("base64");
+      const config = requestMock.mock.calls[0]?.[0] as { headers?: { Authorization?: string } } | undefined;
+      const expected = Buffer.from('user:pass').toString('base64');
       expect(config?.headers?.Authorization).toBe(`Basic ${expected}`);
     } finally {
       vi.unstubAllGlobals();
     }
   });
 
-  it("URL-only overload creates its own axios instance", async () => {
+  it('URL-only overload creates its own axios instance', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload("data: hi\n\n"),
+      data: streamFromSsePayload('data: hi\n\n'),
     }));
     const mockClient = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
     const createSpy = vi
-      .spyOn(axios, "create")
+      .spyOn(axios, 'create')
       .mockReturnValue(mockClient as unknown as ReturnType<typeof axios.create>);
 
     try {
-      const source = axiosEventSource("http://localhost/sse", {
+      const source = axiosEventSource('http://localhost/sse', {
         reconnect: { initialDelayMs: 10_000, maxDelayMs: 10_000 },
       });
 
@@ -216,15 +206,15 @@ describe("axiosEventSource", () => {
     }
   });
 
-  it("calls onopen and transitions readyState to OPEN on success", async () => {
+  it('calls onopen and transitions readyState to OPEN on success', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload("data: hello\n\n"),
+      data: streamFromSsePayload('data: hello\n\n'),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
     let openCalled = false;
-    const source = axiosEventSource(client, "/sse", {
+    const source = axiosEventSource(client, '/sse', {
       onopen: () => {
         openCalled = true;
       },
@@ -242,12 +232,12 @@ describe("axiosEventSource", () => {
   it("onopen receives an SseEvent with type 'open'", async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload("data: hello\n\n"),
+      data: streamFromSsePayload('data: hello\n\n'),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
     const openEvents: unknown[] = [];
-    const source = axiosEventSource(client, "/sse", {
+    const source = axiosEventSource(client, '/sse', {
       onopen: (event) => openEvents.push(event),
     });
 
@@ -255,28 +245,28 @@ describe("axiosEventSource", () => {
     source.close();
 
     expect(openEvents).toHaveLength(1);
-    expect((openEvents[0] as Event).type).toBe("open");
+    expect((openEvents[0] as Event).type).toBe('open');
   });
 
   it("addEventListener('open', ...) fires when connection opens", async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload("data: hello\n\n"),
+      data: streamFromSsePayload('data: hello\n\n'),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
     const openEvents: unknown[] = [];
-    const source = axiosEventSource(client, "/sse");
-    source.addEventListener("open", (event) => openEvents.push(event));
+    const source = axiosEventSource(client, '/sse');
+    source.addEventListener('open', (event) => openEvents.push(event));
 
     await new Promise((resolve) => setTimeout(resolve, 20));
     source.close();
 
     expect(openEvents).toHaveLength(1);
-    expect((openEvents[0] as { type: string }).type).toBe("open");
+    expect((openEvents[0] as { type: string }).type).toBe('open');
   });
 
-  it("calls onerror for non-200 response status", async () => {
+  it('calls onerror for non-200 response status', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 503,
       data: null,
@@ -284,7 +274,7 @@ describe("axiosEventSource", () => {
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
     const errorEvents: SseErrorEventPayload[] = [];
-    const source = axiosEventSource(client, "/sse", {
+    const source = axiosEventSource(client, '/sse', {
       onerror: (err) => errorEvents.push(err),
       reconnect: { initialDelayMs: 10_000, maxDelayMs: 10_000 },
     });
@@ -293,18 +283,19 @@ describe("axiosEventSource", () => {
     source.close();
 
     expect(errorEvents).toHaveLength(1);
-    expect(errorEvents[0]?.type).toBe("error");
-    expect(errorEvents[0]?.error).toBeInstanceOf(Error);
-    expect((errorEvents[0]?.error as Error).message).toContain("503");
+    const firstError = errorEvents[0];
+    expect(firstError?.type).toBe('error');
+    expect(firstError?.error).toBeInstanceOf(Error);
+    expect((firstError!.error as Error).message).toContain('503');
   });
 
   it("onerror receives SseErrorEvent with type 'error' and error field", async () => {
-    const networkError = new Error("network failure");
+    const networkError = new Error('network failure');
     const requestMock = vi.fn((_config: unknown) => Promise.reject(networkError));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
     const errorEvents: SseErrorEventPayload[] = [];
-    const source = axiosEventSource(client, "/sse", {
+    const source = axiosEventSource(client, '/sse', {
       onerror: (event) => errorEvents.push(event),
       reconnect: { initialDelayMs: 10_000, maxDelayMs: 10_000 },
     });
@@ -313,35 +304,35 @@ describe("axiosEventSource", () => {
     source.close();
 
     expect(errorEvents.length).toBeGreaterThan(0);
-    expect(errorEvents[0]?.type).toBe("error");
+    expect(errorEvents[0]?.type).toBe('error');
     expect(errorEvents[0]?.error).toBe(networkError);
   });
 
   it("addEventListener('error', ...) fires on transport failures", async () => {
-    const requestMock = vi.fn((_config: unknown) => Promise.reject(new Error("fail")));
+    const requestMock = vi.fn((_config: unknown) => Promise.reject(new Error('fail')));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
     const errorEvents: unknown[] = [];
-    const source = axiosEventSource(client, "/sse", {
+    const source = axiosEventSource(client, '/sse', {
       reconnect: { initialDelayMs: 10_000, maxDelayMs: 10_000 },
     });
-    source.addEventListener("error", (event) => errorEvents.push(event));
+    source.addEventListener('error', (event) => errorEvents.push(event));
 
     await new Promise((resolve) => setTimeout(resolve, 30));
     source.close();
 
     expect(errorEvents.length).toBeGreaterThan(0);
-    expect((errorEvents[0] as SseErrorEventPayload).type).toBe("error");
+    expect((errorEvents[0] as SseErrorEventPayload).type).toBe('error');
     expect((errorEvents[0] as SseErrorEventPayload).error).toBeInstanceOf(Error);
   });
 
-  it("stops reconnecting when close() is called inside onerror", async () => {
-    const networkError = new Error("network failure");
+  it('stops reconnecting when close() is called inside onerror', async () => {
+    const networkError = new Error('network failure');
     const requestMock = vi.fn((_config: unknown) => Promise.reject(networkError));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
     let source: ReturnType<typeof axiosEventSource>;
-    source = axiosEventSource(client, "/sse", {
+    source = axiosEventSource(client, '/sse', {
       onerror: () => source.close(),
       reconnect: { initialDelayMs: 10_000, maxDelayMs: 10_000 },
     });
@@ -352,15 +343,15 @@ describe("axiosEventSource", () => {
     expect(requestMock).toHaveBeenCalledTimes(1);
   });
 
-  it("onmessage receives SseMessageEvent with origin, source, ports, lastEventId", async () => {
+  it('onmessage receives SseMessageEvent with origin, source, ports, lastEventId', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload("id: 7\ndata: hello\n\n"),
+      data: streamFromSsePayload('id: 7\ndata: hello\n\n'),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
     const received: SseMessageEvent[] = [];
-    const source = axiosEventSource(client, "http://example.com/sse");
+    const source = axiosEventSource(client, 'http://example.com/sse');
     source.onmessage = (event) => received.push(event);
 
     await new Promise((resolve) => setTimeout(resolve, 20));
@@ -368,57 +359,55 @@ describe("axiosEventSource", () => {
 
     expect(received).toHaveLength(1);
     const event = received[0];
-    expect(event?.type).toBe("message");
-    expect(event?.data).toBe("hello");
-    expect(event?.lastEventId).toBe("7");
-    expect(event?.origin).toBe("http://example.com");
+    expect(event?.type).toBe('message');
+    expect(event?.data).toBe('hello');
+    expect(event?.lastEventId).toBe('7');
+    expect(event?.origin).toBe('http://example.com');
     expect(event?.source).toBeNull();
     expect(Array.from(event?.ports ?? [])).toEqual([]);
   });
 
-  it("onmessage lastEventId is empty string when no id field is sent", async () => {
+  it('onmessage lastEventId is empty string when no id field is sent', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload("data: no-id\n\n"),
+      data: streamFromSsePayload('data: no-id\n\n'),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
     const received: SseMessageEvent[] = [];
-    const source = axiosEventSource(client, "/sse");
+    const source = axiosEventSource(client, '/sse');
     source.onmessage = (event) => received.push(event);
 
     await new Promise((resolve) => setTimeout(resolve, 20));
     source.close();
 
-    expect(received[0]?.lastEventId).toBe("");
+    expect(received[0]?.lastEventId).toBe('');
   });
 
-  it("sends Last-Event-ID header on reconnect after receiving an id", async () => {
+  it('sends Last-Event-ID header on reconnect after receiving an id', async () => {
     const receivedIds: (string | undefined)[] = [];
     let callCount = 0;
 
     const requestMock = vi.fn((_config: unknown) => {
       callCount += 1;
-      const config = requestMock.mock.calls[callCount - 1]?.[0] as
-        | { headers?: Record<string, string> }
-        | undefined;
-      receivedIds.push(config?.headers?.["Last-Event-ID"]);
+      const config = requestMock.mock.calls[callCount - 1]?.[0] as { headers?: Record<string, string> } | undefined;
+      receivedIds.push(config?.headers?.['Last-Event-ID']);
       if (callCount === 1) {
         return Promise.resolve({
           status: 200,
-          headers: { "content-type": "text/event-stream" },
-          data: streamFromSsePayload("id: 42\ndata: first\n\n"),
+          headers: { 'content-type': 'text/event-stream' },
+          data: streamFromSsePayload('id: 42\ndata: first\n\n'),
         });
       }
       return Promise.resolve({
         status: 200,
-        headers: { "content-type": "text/event-stream" },
-        data: streamFromSsePayload("data: second\n\n"),
+        headers: { 'content-type': 'text/event-stream' },
+        data: streamFromSsePayload('data: second\n\n'),
       });
     });
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
-    const source = axiosEventSource(client, "/sse", {
+    const source = axiosEventSource(client, '/sse', {
       reconnect: { initialDelayMs: 5, maxDelayMs: 5 },
     });
 
@@ -426,39 +415,37 @@ describe("axiosEventSource", () => {
     source.close();
 
     expect(receivedIds[0]).toBeUndefined();
-    expect(receivedIds[1]).toBe("42");
+    expect(receivedIds[1]).toBe('42');
   });
 
-  it("does not send Last-Event-ID header on first connection", async () => {
+  it('does not send Last-Event-ID header on first connection', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload("data: ok\n\n"),
+      data: streamFromSsePayload('data: ok\n\n'),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
-    const source = axiosEventSource(client, "/sse", {
+    const source = axiosEventSource(client, '/sse', {
       reconnect: { initialDelayMs: 10_000, maxDelayMs: 10_000 },
     });
 
     await new Promise((resolve) => setTimeout(resolve, 20));
     source.close();
 
-    const config = requestMock.mock.calls[0]?.[0] as
-      | { headers?: Record<string, string> }
-      | undefined;
-    expect(config?.headers?.["Last-Event-ID"]).toBeUndefined();
+    const config = requestMock.mock.calls[0]?.[0] as { headers?: Record<string, string> } | undefined;
+    expect(config?.headers?.['Last-Event-ID']).toBeUndefined();
   });
 
-  it("stops processing events when closed inside onmessage", async () => {
+  it('stops processing events when closed inside onmessage', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload("data: first\n\ndata: second\n\n"),
+      data: streamFromSsePayload('data: first\n\ndata: second\n\n'),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
     const received: string[] = [];
     let source: ReturnType<typeof axiosEventSource>;
-    source = axiosEventSource(client, "/sse");
+    source = axiosEventSource(client, '/sse');
     source.onmessage = (event) => {
       received.push(event.data);
       source.close();
@@ -467,18 +454,18 @@ describe("axiosEventSource", () => {
     await new Promise((resolve) => setTimeout(resolve, 30));
 
     expect(received).toHaveLength(1);
-    expect(received[0]).toBe("first");
+    expect(received[0]).toBe('first');
   });
 
-  it("respects external AbortSignal passed via options.signal", async () => {
+  it('respects external AbortSignal passed via options.signal', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload("data: hi\n\n"),
+      data: streamFromSsePayload('data: hi\n\n'),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
     const controller = new AbortController();
-    const source = axiosEventSource(client, "/sse", {
+    const source = axiosEventSource(client, '/sse', {
       signal: controller.signal,
       reconnect: { initialDelayMs: 10_000, maxDelayMs: 10_000 },
     });
@@ -490,42 +477,42 @@ describe("axiosEventSource", () => {
     expect(source.readyState).toBe(2);
   });
 
-  it("addEventListener dispatches named events to registered listener", async () => {
+  it('addEventListener dispatches named events to registered listener', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload("event: ping\ndata: pong\n\n"),
+      data: streamFromSsePayload('event: ping\ndata: pong\n\n'),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
     const received: string[] = [];
-    const source = axiosEventSource(client, "/sse");
-    source.addEventListener("ping", (event) => received.push(event.data));
+    const source = axiosEventSource(client, '/sse');
+    source.addEventListener('ping', (event) => received.push(event.data));
 
     await new Promise((resolve) => setTimeout(resolve, 20));
     source.close();
 
-    expect(received).toContain("pong");
+    expect(received).toContain('pong');
   });
 
   it("addEventListener dispatches 'message' type via named listener", async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload("data: hello\n\n"),
+      data: streamFromSsePayload('data: hello\n\n'),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
     const received: SseMessageEvent[] = [];
-    const source = axiosEventSource(client, "/sse");
-    source.addEventListener("message", (event) => received.push(event));
+    const source = axiosEventSource(client, '/sse');
+    source.addEventListener('message', (event) => received.push(event));
 
     await new Promise((resolve) => setTimeout(resolve, 20));
     source.close();
 
     expect(received).toHaveLength(1);
-    expect(received[0]?.data).toBe("hello");
+    expect(received[0]?.data).toBe('hello');
   });
 
-  it("addEventListener with schema parses and validates event data", async () => {
+  it('addEventListener with schema parses and validates event data', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
       data: streamFromSsePayload('event: tick\ndata: {"count":2}\n\n'),
@@ -534,8 +521,8 @@ describe("axiosEventSource", () => {
     const schema = z.object({ count: z.number().int() });
 
     const received: number[] = [];
-    const source = axiosEventSource(client, "/sse");
-    source.addEventListener("tick", (event) => received.push(event.data.count), { schema });
+    const source = axiosEventSource(client, '/sse');
+    source.addEventListener('tick', (event) => received.push(event.data.count), { schema });
 
     await new Promise((resolve) => setTimeout(resolve, 20));
     source.close();
@@ -543,18 +530,18 @@ describe("axiosEventSource", () => {
     expect(received).toEqual([2]);
   });
 
-  it("addEventListener with schema calls onParseError for invalid JSON", async () => {
+  it('addEventListener with schema calls onParseError for invalid JSON', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload("event: tick\ndata: {not-json}\n\n"),
+      data: streamFromSsePayload('event: tick\ndata: {not-json}\n\n'),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
     const schema = z.object({ count: z.number().int() });
 
     const parsed: number[] = [];
     const parseErrors: unknown[] = [];
-    const source = axiosEventSource(client, "/sse");
-    source.addEventListener("tick", (event) => parsed.push(event.data.count), {
+    const source = axiosEventSource(client, '/sse');
+    source.addEventListener('tick', (event) => parsed.push(event.data.count), {
       schema,
       onParseError: (error) => parseErrors.push(error),
     });
@@ -567,7 +554,7 @@ describe("axiosEventSource", () => {
     expect(parseErrors[0]).toBeInstanceOf(SyntaxError);
   });
 
-  it("addEventListener with schema calls onParseError for schema failures", async () => {
+  it('addEventListener with schema calls onParseError for schema failures', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
       data: streamFromSsePayload('event: tick\ndata: {"count":"x"}\n\n'),
@@ -577,8 +564,8 @@ describe("axiosEventSource", () => {
 
     const parsed: number[] = [];
     const parseErrors: unknown[] = [];
-    const source = axiosEventSource(client, "/sse");
-    source.addEventListener("tick", (event) => parsed.push(event.data.count), {
+    const source = axiosEventSource(client, '/sse');
+    source.addEventListener('tick', (event) => parsed.push(event.data.count), {
       schema,
       onParseError: (error) => parseErrors.push(error),
     });
@@ -590,42 +577,42 @@ describe("axiosEventSource", () => {
     expect(parseErrors).toHaveLength(1);
   });
 
-  it("addEventListener with once:true fires only once", async () => {
+  it('addEventListener with once:true fires only once', async () => {
     let callCount = 0;
     const requestMock = vi.fn((_config: unknown) => {
       callCount += 1;
       if (callCount === 1) {
         return Promise.resolve({
           status: 200,
-          headers: { "content-type": "text/event-stream" },
-          data: streamFromSsePayload("event: ping\ndata: first\n\nevent: ping\ndata: second\n\n"),
+          headers: { 'content-type': 'text/event-stream' },
+          data: streamFromSsePayload('event: ping\ndata: first\n\nevent: ping\ndata: second\n\n'),
         });
       }
       return Promise.resolve({
         status: 200,
-        headers: { "content-type": "text/event-stream" },
-        data: streamFromSsePayload("event: ping\ndata: third\n\n"),
+        headers: { 'content-type': 'text/event-stream' },
+        data: streamFromSsePayload('event: ping\ndata: third\n\n'),
       });
     });
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
     const received: string[] = [];
-    const source = axiosEventSource(client, "/sse", {
+    const source = axiosEventSource(client, '/sse', {
       reconnect: { initialDelayMs: 5, maxDelayMs: 5 },
     });
-    source.addEventListener("ping", (event) => received.push(event.data), { once: true });
+    source.addEventListener('ping', (event) => received.push(event.data), { once: true });
 
     await new Promise((resolve) => setTimeout(resolve, 80));
     source.close();
 
     expect(received).toHaveLength(1);
-    expect(received[0]).toBe("first");
+    expect(received[0]).toBe('first');
   });
 
-  it("addEventListener with handleEvent object listener", async () => {
+  it('addEventListener with handleEvent object listener', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload("data: hello\n\n"),
+      data: streamFromSsePayload('data: hello\n\n'),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
@@ -635,27 +622,27 @@ describe("axiosEventSource", () => {
         received.push(event.data);
       },
     };
-    const source = axiosEventSource(client, "/sse");
-    source.addEventListener("message", listenerObj);
+    const source = axiosEventSource(client, '/sse');
+    source.addEventListener('message', listenerObj);
 
     await new Promise((resolve) => setTimeout(resolve, 20));
     source.close();
 
-    expect(received).toContain("hello");
+    expect(received).toContain('hello');
   });
 
-  it("addEventListener does not register the same listener twice", async () => {
+  it('addEventListener does not register the same listener twice', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload("event: ping\ndata: pong\n\n"),
+      data: streamFromSsePayload('event: ping\ndata: pong\n\n'),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
     const received: string[] = [];
     const listener = (event: SseMessageEvent) => received.push(event.data);
-    const source = axiosEventSource(client, "/sse");
-    source.addEventListener("ping", listener);
-    source.addEventListener("ping", listener);
+    const source = axiosEventSource(client, '/sse');
+    source.addEventListener('ping', listener);
+    source.addEventListener('ping', listener);
 
     await new Promise((resolve) => setTimeout(resolve, 20));
     source.close();
@@ -663,18 +650,18 @@ describe("axiosEventSource", () => {
     expect(received).toHaveLength(1);
   });
 
-  it("removeEventListener prevents listener from receiving further events", async () => {
+  it('removeEventListener prevents listener from receiving further events', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload("event: ping\ndata: pong\n\n"),
+      data: streamFromSsePayload('event: ping\ndata: pong\n\n'),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
     const received: string[] = [];
     const listener = (event: SseMessageEvent) => received.push(event.data);
-    const source = axiosEventSource(client, "/sse");
-    source.addEventListener("ping", listener);
-    source.removeEventListener("ping", listener);
+    const source = axiosEventSource(client, '/sse');
+    source.addEventListener('ping', listener);
+    source.removeEventListener('ping', listener);
 
     await new Promise((resolve) => setTimeout(resolve, 20));
     source.close();
@@ -682,7 +669,7 @@ describe("axiosEventSource", () => {
     expect(received).toHaveLength(0);
   });
 
-  it("removeEventListener works for listeners registered with schema", async () => {
+  it('removeEventListener works for listeners registered with schema', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
       data: streamFromSsePayload('event: tick\ndata: {"count":1}\n\n'),
@@ -692,9 +679,9 @@ describe("axiosEventSource", () => {
 
     const received: number[] = [];
     const listener = (event: SseMessageEvent<{ count: number }>) => received.push(event.data.count);
-    const source = axiosEventSource(client, "/sse");
-    source.addEventListener("tick", listener, { schema });
-    source.removeEventListener("tick", listener);
+    const source = axiosEventSource(client, '/sse');
+    source.addEventListener('tick', listener, { schema });
+    source.removeEventListener('tick', listener);
 
     await new Promise((resolve) => setTimeout(resolve, 20));
     source.close();
@@ -702,39 +689,40 @@ describe("axiosEventSource", () => {
     expect(received).toHaveLength(0);
   });
 
-  it("removeEventListener is a no-op when type has no listeners", () => {
+  it('removeEventListener is a no-op when type has no listeners', () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload(""),
+      data: streamFromSsePayload(''),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
-    const source = axiosEventSource(client, "/sse");
-    expect(() => source.removeEventListener("nonexistent", () => {})).not.toThrow();
+    const source = axiosEventSource(client, '/sse');
+    const noopListener = () => {};
+    expect(() => source.removeEventListener('nonexistent', noopListener)).not.toThrow();
     source.close();
   });
 
-  it("types: onParseError cannot be provided without schema", () => {
+  it('types: onParseError cannot be provided without schema', () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload(""),
+      data: streamFromSsePayload(''),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
-    const source = axiosEventSource(client, "/sse");
+    const source = axiosEventSource(client, '/sse');
 
     // @ts-expect-error onParseError is only valid when schema is provided.
-    source.addEventListener("tick", () => {}, { onParseError: () => {} });
+    source.addEventListener('tick', () => {}, { onParseError: () => {} });
     source.close();
   });
 
-  it("onopen, onmessage, and onerror getters return the assigned values", async () => {
+  it('onopen, onmessage, and onerror getters return the assigned values', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload(""),
+      data: streamFromSsePayload(''),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
-    const source = axiosEventSource(client, "/sse");
+    const source = axiosEventSource(client, '/sse');
 
     const openFn = () => {};
     const messageFn = (_event: SseMessageEvent) => {};
@@ -751,11 +739,11 @@ describe("axiosEventSource", () => {
     source.close();
   });
 
-  it("close() before first response sets readyState to CLOSED", async () => {
+  it('close() before first response sets readyState to CLOSED', async () => {
     const requestMock = vi.fn((_config: unknown) => new Promise(() => {}));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
-    const source = axiosEventSource(client, "/sse");
+    const source = axiosEventSource(client, '/sse');
     expect(source.readyState).toBe(0);
 
     source.close();
@@ -764,27 +752,27 @@ describe("axiosEventSource", () => {
     await new Promise((resolve) => setTimeout(resolve, 10));
   });
 
-  it("applies server retry: interval as the reconnect delay", async () => {
+  it('applies server retry: interval as the reconnect delay', async () => {
     let callCount = 0;
     const requestMock = vi.fn((_config: unknown) => {
       callCount += 1;
       if (callCount === 1) {
         return Promise.resolve({
           status: 200,
-          headers: { "content-type": "text/event-stream" },
-          data: streamFromSsePayload("retry: 50\ndata: first\n\n"),
+          headers: { 'content-type': 'text/event-stream' },
+          data: streamFromSsePayload('retry: 50\ndata: first\n\n'),
         });
       }
       return Promise.resolve({
         status: 200,
-        headers: { "content-type": "text/event-stream" },
-        data: streamFromSsePayload("data: second\n\n"),
+        headers: { 'content-type': 'text/event-stream' },
+        data: streamFromSsePayload('data: second\n\n'),
       });
     });
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
     const received: string[] = [];
-    const source = axiosEventSource(client, "/sse", {
+    const source = axiosEventSource(client, '/sse', {
       reconnect: { initialDelayMs: 10_000, maxDelayMs: 10_000 },
     });
     source.onmessage = (event) => received.push(event.data);
@@ -792,96 +780,96 @@ describe("axiosEventSource", () => {
     await new Promise((resolve) => setTimeout(resolve, 200));
     source.close();
 
-    expect(received).toContain("second");
+    expect(received).toContain('second');
     expect(callCount).toBeGreaterThanOrEqual(2);
   });
 
-  it("origin is extracted from absolute URL", async () => {
+  it('origin is extracted from absolute URL', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload("data: hello\n\n"),
+      data: streamFromSsePayload('data: hello\n\n'),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
     const received: SseMessageEvent[] = [];
-    const source = axiosEventSource(client, "https://api.example.com/events");
+    const source = axiosEventSource(client, 'https://api.example.com/events');
     source.onmessage = (event) => received.push(event);
 
     await new Promise((resolve) => setTimeout(resolve, 20));
     source.close();
 
-    expect(received[0]?.origin).toBe("https://api.example.com");
+    expect(received[0]?.origin).toBe('https://api.example.com');
   });
 
-  it("origin is empty string for relative URL", async () => {
+  it('origin is empty string for relative URL', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload("data: hello\n\n"),
+      data: streamFromSsePayload('data: hello\n\n'),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
     const received: SseMessageEvent[] = [];
-    const source = axiosEventSource(client, "/sse");
+    const source = axiosEventSource(client, '/sse');
     source.onmessage = (event) => received.push(event);
 
     await new Promise((resolve) => setTimeout(resolve, 20));
     source.close();
 
-    expect(received[0]?.origin).toBe("");
+    expect(received[0]?.origin).toBe('');
   });
 
-  it("exposes CONNECTING, OPEN, CLOSED constants", () => {
+  it('exposes CONNECTING, OPEN, CLOSED constants', () => {
     expect(CONNECTING).toBe(0);
     expect(OPEN).toBe(1);
     expect(CLOSED).toBe(2);
   });
 
-  it("returned instance is an EventTarget", async () => {
+  it('returned instance is an EventTarget', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
-      data: streamFromSsePayload(""),
+      data: streamFromSsePayload(''),
     }));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
-    const source = axiosEventSource(client, "/sse");
+    const source = axiosEventSource(client, '/sse');
     expect(source instanceof EventTarget).toBe(true);
     source.close();
   });
 
-  it("closes immediately when options.signal is already aborted", async () => {
+  it('closes immediately when options.signal is already aborted', async () => {
     const requestMock = vi.fn();
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
     const controller = new AbortController();
     controller.abort();
-    const source = axiosEventSource(client, "/sse", { signal: controller.signal });
+    const source = axiosEventSource(client, '/sse', { signal: controller.signal });
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(source.readyState).toBe(2);
     expect(requestMock).not.toHaveBeenCalled();
   });
 
-  it("rejects response when rejectNonEventStream is true and Content-Type is not text/event-stream", async () => {
+  it('rejects response when rejectNonEventStream is true and Content-Type is not text/event-stream', async () => {
     const requestMock = vi.fn((_config: unknown) =>
       Promise.resolve({
         status: 200,
-        headers: { "content-type": "application/json" },
-        data: streamFromSsePayload("data: x\n\n"),
+        headers: { 'content-type': 'application/json' },
+        data: streamFromSsePayload('data: x\n\n'),
       }),
     );
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
     const errorEvents: SseErrorEventPayload[] = [];
-    const source = axiosEventSource(client, "/sse", {
+    const source = axiosEventSource(client, '/sse', {
       onerror: (e) => errorEvents.push(e),
       reconnect: { initialDelayMs: 10_000, maxDelayMs: 10_000 },
     });
     await new Promise((resolve) => setTimeout(resolve, 30));
     source.close();
     expect(errorEvents).toHaveLength(1);
-    expect((errorEvents[0]?.error as Error).message).toContain("Content-Type");
+    expect((errorEvents[0]!.error as Error).message).toContain('Content-Type');
   });
 
-  it("stops reconnecting after maxRetries failures", async () => {
-    const requestMock = vi.fn((_config: unknown) => Promise.reject(new Error("network error")));
+  it('stops reconnecting after maxRetries failures', async () => {
+    const requestMock = vi.fn((_config: unknown) => Promise.reject(new Error('network error')));
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
-    const source = axiosEventSource(client, "/sse", {
+    const source = axiosEventSource(client, '/sse', {
       reconnect: { initialDelayMs: 5, maxDelayMs: 5, maxRetries: 2 },
     });
     await new Promise((resolve) => setTimeout(resolve, 100));

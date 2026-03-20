@@ -1,10 +1,10 @@
-import cors from "cors";
-import express from "express";
+import cors from 'cors';
+import express from 'express';
 
 const app = express();
 app.use(
   cors({
-    origin: ["http://localhost:3000", "http://127.0.0.1:3000"],
+    origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
     credentials: true,
   }),
 );
@@ -12,14 +12,14 @@ app.use(express.json());
 const port = Number(process.env.PORT ?? 4001);
 
 function isAuthorized(header: string | undefined, mode: string): boolean {
-  if (mode === "none") {
+  if (mode === 'none') {
     return true;
   }
-  if (mode === "bearer") {
-    return header === "Bearer demo-token";
+  if (mode === 'bearer') {
+    return header === 'Bearer demo-token';
   }
-  if (mode === "basic") {
-    return header === `Basic ${Buffer.from("demo:secret").toString("base64")}`;
+  if (mode === 'basic') {
+    return header === `Basic ${Buffer.from('demo:secret').toString('base64')}`;
   }
   return false;
 }
@@ -30,16 +30,16 @@ function handleSseStream(
   mode: string,
   extra?: Record<string, unknown>,
 ): void {
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
 
   let count = 0;
   const timer = setInterval(() => {
     count += 1;
     const basePayload = {
-      source: "express",
+      source: 'express',
       count,
       mode,
       timestamp: new Date().toISOString(),
@@ -48,7 +48,7 @@ function handleSseStream(
 
     // Mostly valid events, occasionally edge-cases to stress parser/reconnect behavior.
     if (count % 11 === 0) {
-      res.write(": ping edge-case comment\n\n");
+      res.write(': ping edge-case comment\n\n');
       return;
     }
     if (count % 17 === 0) {
@@ -56,25 +56,23 @@ function handleSseStream(
       return;
     }
     if (count % 23 === 0) {
-      res.write(
-        `event: edge-case\ndata: ${JSON.stringify({ ...basePayload, kind: "unknown-event" })}\n\n`,
-      );
+      res.write(`event: edge-case\ndata: ${JSON.stringify({ ...basePayload, kind: 'unknown-event' })}\n\n`);
       return;
     }
     if (count % 29 === 0) {
       res.write(
-        `event: tick\nid: ${count}\ndata: ${JSON.stringify({ ...basePayload, kind: "server-forced-disconnect" })}\n\n`,
+        `event: tick\nid: ${count}\ndata: ${JSON.stringify({ ...basePayload, kind: 'server-forced-disconnect' })}\n\n`,
       );
       clearInterval(timer);
       res.end();
       return;
     }
 
-    res.write(": ping\n\n");
+    res.write(': ping\n\n');
     res.write(`event: tick\nid: ${count}\ndata: ${JSON.stringify(basePayload)}\n\n`);
   }, 1_000);
 
-  req.on("close", () => {
+  req.on('close', () => {
     clearInterval(timer);
     res.end();
   });
@@ -87,12 +85,12 @@ function handleSseStream(
  * - On reconnect the client sends Last-Event-ID so the server can skip already-seen events.
  */
 function handleRecoveryStream(req: express.Request, res: express.Response): void {
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
 
-  const lastEventIdHeader = req.header("last-event-id");
+  const lastEventIdHeader = req.header('last-event-id');
   const startFrom = lastEventIdHeader ? Number.parseInt(lastEventIdHeader, 10) + 1 : 1;
 
   let count = startFrom;
@@ -102,7 +100,7 @@ function handleRecoveryStream(req: express.Request, res: express.Response): void
   const timer = setInterval(() => {
     emitted += 1;
     const payload = {
-      source: "express",
+      source: 'express',
       id: count,
       timestamp: new Date().toISOString(),
       resumedFrom: lastEventIdHeader ?? null,
@@ -116,7 +114,7 @@ function handleRecoveryStream(req: express.Request, res: express.Response): void
     }
   }, 500);
 
-  req.on("close", () => {
+  req.on('close', () => {
     clearInterval(timer);
     res.end();
   });
@@ -128,19 +126,19 @@ function handleRecoveryStream(req: express.Request, res: express.Response): void
  * - Disconnects quickly so the client is forced to reconnect using the server-supplied delay.
  */
 function handleRetryStream(req: express.Request, res: express.Response): void {
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
 
   // Instruct clients to wait 3 seconds before reconnecting.
-  res.write("retry: 3000\n\n");
+  res.write('retry: 3000\n\n');
 
   let count = 0;
   const timer = setInterval(() => {
     count += 1;
     const payload = {
-      source: "express",
+      source: 'express',
       count,
       retrySetByServer: 3000,
       timestamp: new Date().toISOString(),
@@ -154,36 +152,36 @@ function handleRetryStream(req: express.Request, res: express.Response): void {
     }
   }, 500);
 
-  req.on("close", () => {
+  req.on('close', () => {
     clearInterval(timer);
     res.end();
   });
 }
 
-app.get("/sse", (req, res) => {
-  const mode = String(req.query.auth ?? "none");
-  if (!isAuthorized(req.header("authorization"), mode)) {
-    res.status(401).json({ error: "Unauthorized" });
+app.get('/sse', (req, res) => {
+  const mode = String(req.query.auth ?? 'none');
+  if (!isAuthorized(req.header('authorization'), mode)) {
+    res.status(401).json({ error: 'Unauthorized' });
     return;
   }
   handleSseStream(req, res, mode);
 });
 
-app.post("/sse", (req, res) => {
-  const mode = String(req.query.auth ?? "none");
-  if (!isAuthorized(req.header("authorization"), mode)) {
-    res.status(401).json({ error: "Unauthorized" });
+app.post('/sse', (req, res) => {
+  const mode = String(req.query.auth ?? 'none');
+  if (!isAuthorized(req.header('authorization'), mode)) {
+    res.status(401).json({ error: 'Unauthorized' });
     return;
   }
   const body = req.body as Record<string, unknown> | undefined;
   handleSseStream(req, res, mode, body ? { requestBody: body } : undefined);
 });
 
-app.get("/sse/recovery", (req, res) => {
+app.get('/sse/recovery', (req, res) => {
   handleRecoveryStream(req, res);
 });
 
-app.get("/sse/retry", (req, res) => {
+app.get('/sse/retry', (req, res) => {
   handleRetryStream(req, res);
 });
 

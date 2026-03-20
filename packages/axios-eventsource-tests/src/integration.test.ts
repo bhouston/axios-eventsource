@@ -1,8 +1,8 @@
-import http from "node:http";
-import axios from "axios";
-import type { SseErrorEventPayload, SseMessageEvent } from "axios-eventsource";
-import { axiosEventSource } from "axios-eventsource";
-import { afterEach, describe, expect, it } from "vitest";
+import http from 'node:http';
+import axios from 'axios';
+import type { SseErrorEventPayload, SseMessageEvent } from 'axios-eventsource';
+import { axiosEventSource } from 'axios-eventsource';
+import { afterEach, describe, expect, it } from 'vitest';
 
 type ServerHandle = {
   baseUrl: string;
@@ -13,36 +13,36 @@ async function startSseServer(): Promise<ServerHandle> {
   let connectionCount = 0;
 
   const server = http.createServer((req, res) => {
-    if (!req.url || !req.url.startsWith("/sse")) {
+    if (!req.url || !req.url.startsWith('/sse')) {
       res.statusCode = 404;
-      res.end("not found");
+      res.end('not found');
       return;
     }
 
     const bearer = req.headers.authorization;
-    const url = new URL(req.url, "http://localhost");
-    const mode = url.searchParams.get("auth") ?? "none";
-    const scenario = url.searchParams.get("scenario") ?? "default";
+    const url = new URL(req.url, 'http://localhost');
+    const mode = url.searchParams.get('auth') ?? 'none';
+    const scenario = url.searchParams.get('scenario') ?? 'default';
 
-    if (mode === "bearer" && bearer !== "Bearer valid-token") {
+    if (mode === 'bearer' && bearer !== 'Bearer valid-token') {
       res.statusCode = 401;
-      res.end("unauthorized");
+      res.end('unauthorized');
       return;
     }
-    if (mode === "basic" && bearer !== `Basic ${Buffer.from("demo:secret").toString("base64")}`) {
+    if (mode === 'basic' && bearer !== `Basic ${Buffer.from('demo:secret').toString('base64')}`) {
       res.statusCode = 401;
-      res.end("unauthorized");
+      res.end('unauthorized');
       return;
     }
 
-    const isPost = req.method === "POST";
+    const isPost = req.method === 'POST';
 
     if (isPost) {
-      let body = "";
-      req.on("data", (chunk: Buffer) => {
+      let body = '';
+      req.on('data', (chunk: Buffer) => {
         body += chunk.toString();
       });
-      req.on("end", () => {
+      req.on('end', () => {
         let parsed: Record<string, unknown> = {};
         try {
           parsed = JSON.parse(body) as Record<string, unknown>;
@@ -51,48 +51,44 @@ async function startSseServer(): Promise<ServerHandle> {
         }
         connectionCount += 1;
         res.writeHead(200, {
-          "Content-Type": "text/event-stream",
-          "Cache-Control": "no-cache",
-          Connection: "keep-alive",
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          Connection: 'keep-alive',
         });
-        res.write(
-          `event: tick\ndata: ${JSON.stringify({ count: connectionCount, method: "POST", body: parsed })}\n\n`,
-        );
+        res.write(`event: tick\ndata: ${JSON.stringify({ count: connectionCount, method: 'POST', body: parsed })}\n\n`);
         setTimeout(() => res.end(), 25);
       });
       return;
     }
 
     // Last-Event-ID recovery scenario: server reads the header and resumes from that id
-    if (scenario === "last-event-id") {
-      const lastEventIdRaw = req.headers["last-event-id"];
+    if (scenario === 'last-event-id') {
+      const lastEventIdRaw = req.headers['last-event-id'];
       const lastEventId = Array.isArray(lastEventIdRaw) ? lastEventIdRaw[0] : lastEventIdRaw;
       const startFrom = lastEventId ? Number.parseInt(lastEventId, 10) + 1 : 1;
 
       res.writeHead(200, {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
       });
 
       // Send two events then disconnect
       res.write(`id: ${startFrom}\nevent: tick\ndata: ${JSON.stringify({ id: startFrom })}\n\n`);
-      res.write(
-        `id: ${startFrom + 1}\nevent: tick\ndata: ${JSON.stringify({ id: startFrom + 1 })}\n\n`,
-      );
+      res.write(`id: ${startFrom + 1}\nevent: tick\ndata: ${JSON.stringify({ id: startFrom + 1 })}\n\n`);
       setTimeout(() => res.end(), 25);
       return;
     }
 
     // Server-driven retry scenario: server sends retry: then disconnects
-    if (scenario === "retry") {
+    if (scenario === 'retry') {
       connectionCount += 1;
       res.writeHead(200, {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
       });
-      res.write("retry: 30\n\n");
+      res.write('retry: 30\n\n');
       res.write(`event: tick\ndata: ${JSON.stringify({ count: connectionCount })}\n\n`);
       setTimeout(() => res.end(), 25);
       return;
@@ -100,13 +96,13 @@ async function startSseServer(): Promise<ServerHandle> {
 
     connectionCount += 1;
     res.writeHead(200, {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
     });
 
     if (connectionCount === 1) {
-      res.write(": ping\n\n");
+      res.write(': ping\n\n');
       res.write('event: tick\ndata: {"count":1}\n\n');
       res.end();
       return;
@@ -117,12 +113,12 @@ async function startSseServer(): Promise<ServerHandle> {
   });
 
   await new Promise<void>((resolve) => {
-    server.listen(0, "127.0.0.1", () => resolve());
+    server.listen(0, '127.0.0.1', () => resolve());
   });
 
   const address = server.address();
-  if (!address || typeof address === "string") {
-    throw new Error("Unable to determine server address");
+  if (!address || typeof address === 'string') {
+    throw new Error('Unable to determine server address');
   }
 
   return {
@@ -149,8 +145,8 @@ afterEach(async () => {
   }
 });
 
-describe("axios-eventsource integration", () => {
-  it("reconnects after disconnect and continues delivering events", async () => {
+describe('axios-eventsource integration', () => {
+  it('reconnects after disconnect and continues delivering events', async () => {
     const server = await startSseServer();
     cleanup.push(server.close);
 
@@ -160,7 +156,7 @@ describe("axios-eventsource integration", () => {
       reconnect: { initialDelayMs: 10, maxDelayMs: 20 },
     });
 
-    source.addEventListener("tick", (event: Event) => {
+    source.addEventListener('tick', (event: Event) => {
       received.push((event as unknown as SseMessageEvent).data);
     });
 
@@ -171,14 +167,14 @@ describe("axios-eventsource integration", () => {
     expect(received).toContain('{"count":2}');
   });
 
-  it("supports bearer auth via provided axios instance interceptors", async () => {
+  it('supports bearer auth via provided axios instance interceptors', async () => {
     const server = await startSseServer();
     cleanup.push(server.close);
 
     const client = axios.create();
     client.interceptors.request.use((config) => {
       config.headers = config.headers ?? {};
-      config.headers.Authorization = "Bearer valid-token";
+      config.headers.Authorization = 'Bearer valid-token';
       return config;
     });
 
@@ -186,7 +182,7 @@ describe("axios-eventsource integration", () => {
     const source = axiosEventSource(client, `${server.baseUrl}/sse?auth=bearer`, {
       reconnect: { initialDelayMs: 10, maxDelayMs: 20 },
     });
-    source.addEventListener("tick", (event: Event) => {
+    source.addEventListener('tick', (event: Event) => {
       received.push((event as unknown as SseMessageEvent).data);
     });
 
@@ -196,14 +192,14 @@ describe("axios-eventsource integration", () => {
     expect(received.length).toBeGreaterThan(0);
   });
 
-  it("aborts cleanly without leaking reconnect attempts", async () => {
+  it('aborts cleanly without leaking reconnect attempts', async () => {
     const server = await startSseServer();
     cleanup.push(server.close);
 
     const client = axios.create();
     let errorCount = 0;
     const source = axiosEventSource(client, `${server.baseUrl}/sse?auth=bearer`, {
-      auth: { type: "bearer", token: "wrong-token" },
+      auth: { type: 'bearer', token: 'wrong-token' },
       reconnect: { initialDelayMs: 10, maxDelayMs: 20 },
       onerror: () => {
         errorCount += 1;
@@ -220,7 +216,7 @@ describe("axios-eventsource integration", () => {
     expect(source.readyState).toBe(2);
   });
 
-  it("supports POST method and delivers events", async () => {
+  it('supports POST method and delivers events', async () => {
     const server = await startSseServer();
     cleanup.push(server.close);
 
@@ -228,12 +224,12 @@ describe("axios-eventsource integration", () => {
     const received: Array<{ count: number; method: string; body: Record<string, unknown> }> = [];
 
     const source = axiosEventSource(client, `${server.baseUrl}/sse`, {
-      method: "POST",
-      data: { prompt: "hello world" },
+      method: 'POST',
+      data: { prompt: 'hello world' },
       reconnect: { initialDelayMs: 10, maxDelayMs: 20 },
     });
 
-    source.addEventListener("tick", (event: Event) => {
+    source.addEventListener('tick', (event: Event) => {
       received.push(
         JSON.parse((event as unknown as SseMessageEvent).data) as {
           count: number;
@@ -247,29 +243,29 @@ describe("axios-eventsource integration", () => {
     source.close();
 
     expect(received.length).toBeGreaterThan(0);
-    expect(received[0]?.method).toBe("POST");
-    expect(received[0]?.body).toEqual({ prompt: "hello world" });
+    expect(received[0]?.method).toBe('POST');
+    expect(received[0]?.body).toEqual({ prompt: 'hello world' });
   });
 
-  it("supports POST method with bearer auth", async () => {
+  it('supports POST method with bearer auth', async () => {
     const server = await startSseServer();
     cleanup.push(server.close);
 
     const client = axios.create();
     client.interceptors.request.use((config) => {
       config.headers = config.headers ?? {};
-      config.headers.Authorization = "Bearer valid-token";
+      config.headers.Authorization = 'Bearer valid-token';
       return config;
     });
 
     const received: Array<{ method: string }> = [];
     const source = axiosEventSource(client, `${server.baseUrl}/sse?auth=bearer`, {
-      method: "POST",
-      data: { query: "test" },
+      method: 'POST',
+      data: { query: 'test' },
       reconnect: { initialDelayMs: 10, maxDelayMs: 20 },
     });
 
-    source.addEventListener("tick", (event: Event) => {
+    source.addEventListener('tick', (event: Event) => {
       received.push(JSON.parse((event as unknown as SseMessageEvent).data) as { method: string });
     });
 
@@ -277,10 +273,10 @@ describe("axios-eventsource integration", () => {
     source.close();
 
     expect(received.length).toBeGreaterThan(0);
-    expect(received[0]?.method).toBe("POST");
+    expect(received[0]?.method).toBe('POST');
   });
 
-  it("sends Last-Event-ID header on reconnect after receiving events with ids", async () => {
+  it('sends Last-Event-ID header on reconnect after receiving events with ids', async () => {
     const server = await startSseServer();
     cleanup.push(server.close);
 
@@ -291,7 +287,7 @@ describe("axios-eventsource integration", () => {
       reconnect: { initialDelayMs: 30, maxDelayMs: 50 },
     });
 
-    source.addEventListener("tick", (event: Event) => {
+    source.addEventListener('tick', (event: Event) => {
       received.push(JSON.parse((event as unknown as SseMessageEvent).data) as { id: number });
     });
 
@@ -310,7 +306,7 @@ describe("axios-eventsource integration", () => {
     expect(ids[3]).toBe(4);
   });
 
-  it("exposes url and withCredentials on the returned source object", async () => {
+  it('exposes url and withCredentials on the returned source object', async () => {
     const server = await startSseServer();
     cleanup.push(server.close);
 
@@ -326,7 +322,7 @@ describe("axios-eventsource integration", () => {
     source.close();
   });
 
-  it("fires onopen and addEventListener(open) on successful connection", async () => {
+  it('fires onopen and addEventListener(open) on successful connection', async () => {
     const server = await startSseServer();
     cleanup.push(server.close);
 
@@ -334,10 +330,10 @@ describe("axios-eventsource integration", () => {
     const openCallbacks: unknown[] = [];
 
     const source = axiosEventSource(client, `${server.baseUrl}/sse`, {
-      onopen: (event) => openCallbacks.push({ via: "onopen", event }),
+      onopen: (event) => openCallbacks.push({ via: 'onopen', event }),
       reconnect: { initialDelayMs: 10_000, maxDelayMs: 10_000 },
     });
-    source.addEventListener("open", (event) => openCallbacks.push({ via: "listener", event }));
+    source.addEventListener('open', (event) => openCallbacks.push({ via: 'listener', event }));
 
     await delay(80);
     source.close();
@@ -352,7 +348,7 @@ describe("axios-eventsource integration", () => {
     expect(viaCounts.listener).toBeGreaterThanOrEqual(1);
   });
 
-  it("fires onerror and addEventListener(error) on transport failure", async () => {
+  it('fires onerror and addEventListener(error) on transport failure', async () => {
     const server = await startSseServer();
     cleanup.push(server.close);
 
@@ -360,25 +356,23 @@ describe("axios-eventsource integration", () => {
     const errorCallbacks: Array<SseErrorEventPayload> = [];
 
     const source = axiosEventSource(client, `${server.baseUrl}/sse?auth=bearer`, {
-      auth: { type: "bearer", token: "wrong" },
+      auth: { type: 'bearer', token: 'wrong' },
       onerror: (event) => errorCallbacks.push(event),
       reconnect: { initialDelayMs: 10_000, maxDelayMs: 10_000 },
     });
-    source.addEventListener("error", (event: Event) =>
-      errorCallbacks.push(event as unknown as SseErrorEventPayload),
-    );
+    source.addEventListener('error', (event: Event) => errorCallbacks.push(event as unknown as SseErrorEventPayload));
 
     await delay(80);
     source.close();
 
     expect(errorCallbacks.length).toBeGreaterThanOrEqual(2);
     for (const e of errorCallbacks) {
-      expect(e.type).toBe("error");
+      expect(e.type).toBe('error');
       expect(e.error).toBeDefined();
     }
   });
 
-  it("SseMessageEvent has correct shape with origin, source, ports", async () => {
+  it('SseMessageEvent has correct shape with origin, source, ports', async () => {
     const server = await startSseServer();
     cleanup.push(server.close);
 
@@ -388,9 +382,7 @@ describe("axios-eventsource integration", () => {
     const source = axiosEventSource(client, `${server.baseUrl}/sse?scenario=last-event-id`, {
       reconnect: { initialDelayMs: 10_000, maxDelayMs: 10_000 },
     });
-    source.addEventListener("tick", (event: Event) =>
-      received.push(event as unknown as SseMessageEvent),
-    );
+    source.addEventListener('tick', (event: Event) => received.push(event as unknown as SseMessageEvent));
 
     await delay(80);
     source.close();
@@ -399,10 +391,10 @@ describe("axios-eventsource integration", () => {
     expect(received[0]?.origin).toBe(`http://127.0.0.1:${new URL(server.baseUrl).port}`);
     expect(received[0]?.source).toBeNull();
     expect(received[0]?.ports).toEqual([]);
-    expect(typeof received[0]?.lastEventId).toBe("string");
+    expect(typeof received[0]?.lastEventId).toBe('string');
   });
 
-  it("respects server-sent retry: interval for reconnect timing", async () => {
+  it('respects server-sent retry: interval for reconnect timing', async () => {
     const server = await startSseServer();
     cleanup.push(server.close);
 
@@ -413,7 +405,7 @@ describe("axios-eventsource integration", () => {
     const source = axiosEventSource(client, `${server.baseUrl}/sse?scenario=retry`, {
       reconnect: { initialDelayMs: 60_000, maxDelayMs: 60_000 },
     });
-    source.addEventListener("tick", (event: Event) => {
+    source.addEventListener('tick', (event: Event) => {
       received.push(JSON.parse((event as unknown as SseMessageEvent).data) as { count: number });
     });
 

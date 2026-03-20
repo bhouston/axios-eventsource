@@ -2,8 +2,9 @@
   "extends": "../../tsconfig.node.json",
   "compilerOptions": {
     "composite": true,
-    "noEmit": true
+    "lib": ["ES2024", "DOM"]
   },
   "include": ["src/**/*.ts"],
-  "references": [{ "path": "../axios-eventsource" }]
+  "exclude": ["src/**/*.test.ts"],
+  "references": []
 }

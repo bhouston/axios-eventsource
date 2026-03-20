@@ -1,4 +1,4 @@
-import { defineRoute } from "fastify-file-router";
+import { defineRoute } from 'fastify-file-router';
 
 /**
  * Server-driven retry demo:
@@ -8,30 +8,30 @@ import { defineRoute } from "fastify-file-router";
 export const route = defineRoute({
   schema: {
     querystring: {
-      type: "object",
+      type: 'object',
       properties: {},
       additionalProperties: false,
     } as const,
   },
   handler: async (request, reply) => {
-    const origin = typeof request.headers.origin === "string" ? request.headers.origin : undefined;
-    reply.raw.setHeader("Access-Control-Allow-Origin", origin ?? "*");
-    if (origin) reply.raw.setHeader("Vary", "Origin");
+    const origin = typeof request.headers.origin === 'string' ? request.headers.origin : undefined;
+    reply.raw.setHeader('Access-Control-Allow-Origin', origin ?? '*');
+    if (origin) reply.raw.setHeader('Vary', 'Origin');
 
     reply.raw.writeHead(200, {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
     });
 
     // Instruct clients to wait 3 seconds before reconnecting.
-    reply.raw.write("retry: 3000\n\n");
+    reply.raw.write('retry: 3000\n\n');
 
     let count = 0;
     const timer = setInterval(() => {
       count += 1;
       const payload = {
-        source: "fastify",
+        source: 'fastify',
         count,
         retrySetByServer: 3000,
         timestamp: new Date().toISOString(),
@@ -45,7 +45,7 @@ export const route = defineRoute({
       }
     }, 500);
 
-    request.raw.on("close", () => {
+    request.raw.on('close', () => {
       clearInterval(timer);
       reply.raw.end();
     });

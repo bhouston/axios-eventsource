@@ -26,30 +26,30 @@ pnpm add axios-eventsource axios zod
 ## Quick Start
 
 ```ts
-import axios from "axios";
-import { axiosEventSource } from "axios-eventsource";
+import axios from 'axios';
+import { axiosEventSource } from 'axios-eventsource';
 
 const client = axios.create({
-  baseURL: "https://api.example.com",
+  baseURL: 'https://api.example.com',
 });
 
-const stream = axiosEventSource(client, "/events", {
+const stream = axiosEventSource(client, '/events', {
   reconnect: { initialDelayMs: 1_000, maxDelayMs: 30_000 },
   onopen: (event) => {
-    console.log("SSE connected, type:", event.type);
+    console.log('SSE connected, type:', event.type);
   },
   onerror: (event) => {
-    console.error("SSE error:", event.error);
+    console.error('SSE error:', event.error);
   },
 });
 
 stream.onmessage = (event) => {
-  console.log("message:", event.data, "lastEventId:", event.lastEventId);
+  console.log('message:', event.data, 'lastEventId:', event.lastEventId);
 };
 
-stream.addEventListener("tick", (event) => {
+stream.addEventListener('tick', (event) => {
   const payload = JSON.parse(event.data) as { count: number };
-  console.log("tick:", payload.count);
+  console.log('tick:', payload.count);
 });
 
 // Later
@@ -62,13 +62,13 @@ When you pass a `schema` in the third `addEventListener` parameter, the library 
 `event.data` with `JSON.parse` and validates it with Zod before invoking your listener.
 
 ```ts
-import { z } from "zod";
+import { z } from 'zod';
 
 const serverEventDataSchemas = {
-  "asset:created": z.object({
+  'asset:created': z.object({
     asset: z.object({ id: z.number().int(), name: z.string() }),
   }),
-  "asset:deleted": z.object({
+  'asset:deleted': z.object({
     assetId: z.number().int(),
     orgName: z.string(),
     projectName: z.string(),
@@ -76,15 +76,19 @@ const serverEventDataSchemas = {
   }),
 } as const;
 
-stream.addEventListener("asset:created", (event) => {
-  // event.data is typed as { asset: { id: number; name: string } }
-  console.log(event.data.asset.id);
-}, {
-  schema: serverEventDataSchemas["asset:created"],
-  onParseError: (error, rawEvent) => {
-    console.error("Invalid SSE payload for", rawEvent.type, error);
+stream.addEventListener(
+  'asset:created',
+  (event) => {
+    // event.data is typed as { asset: { id: number; name: string } }
+    console.log(event.data.asset.id);
   },
-});
+  {
+    schema: serverEventDataSchemas['asset:created'],
+    onParseError: (error, rawEvent) => {
+      console.error('Invalid SSE payload for', rawEvent.type, error);
+    },
+  },
+);
 ```
 
 Without `schema`, behavior is unchanged and `event.data` remains a raw string.
@@ -99,14 +103,14 @@ client.interceptors.request.use(async (config) => {
   config.headers.Authorization = `Bearer ${await getFreshAccessToken()}`;
   return config;
 });
-const stream = axiosEventSource(client, "https://api.example.com/sse");
+const stream = axiosEventSource(client, 'https://api.example.com/sse');
 ```
 
 Or use built-in auth so you don’t need a pre-configured instance:
 
 ```ts
-axiosEventSource("https://api.example.com/sse", {
-  auth: { type: "bearer", token: async () => getFreshAccessToken() },
+axiosEventSource('https://api.example.com/sse', {
+  auth: { type: 'bearer', token: async () => getFreshAccessToken() },
 });
 
 // Or: auth: { type: "none" } | { type: "basic", username, password }
@@ -135,12 +139,12 @@ Constants `CONNECTING`, `OPEN`, `CLOSED` and the `SseErrorEvent` class are expor
 
 ### Differences from native `EventSource`
 
-| Area | Native `EventSource` | `axios-eventsource` |
-| :--- | :--- | :--- |
-| Constructor | `new EventSource(url)` | `axiosEventSource(client, url, opts)` |
-| `onerror` | Bare `Event` | `SseErrorEvent` with `.error` for the real failure |
-| Transport | Browser built-in | Axios + fetch adapter (interceptors, auth, Node.js) |
-| Custom headers / POST | No | Yes |
+| Area                  | Native `EventSource`   | `axios-eventsource`                                 |
+| :-------------------- | :--------------------- | :-------------------------------------------------- |
+| Constructor           | `new EventSource(url)` | `axiosEventSource(client, url, opts)`               |
+| `onerror`             | Bare `Event`           | `SseErrorEvent` with `.error` for the real failure  |
+| Transport             | Browser built-in       | Axios + fetch adapter (interceptors, auth, Node.js) |
+| Custom headers / POST | No                     | Yes                                                 |
 
 ### Requirements
 
@@ -148,12 +152,17 @@ Constants `CONNECTING`, `OPEN`, `CLOSED` and the `SseErrorEvent` class are expor
 - **Node**: Node 18+ for `EventTarget` and `MessageEvent`.
 - **Reconnect**: Runs until `close()` or `signal` abort, unless `reconnect.maxRetries` is set.
 
-## Local Development
+## Development
 
-```sh
+```bash
 pnpm install
 pnpm dev
-pnpm test
+pnpm tsc # typescript-native
+pnpm build
+pnpm lint # oxlint
+pnpm lint:fix
+pnpm format # oxfmt
+pnpm test # vitest
 ```
 
 `pnpm dev` runs the library in watch mode, Express and Fastify SSE demos, and a demo site. See the repo for layout (`packages/axios-eventsource`, `examples/`, etc.).
