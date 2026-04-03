@@ -30,6 +30,7 @@
     "verbatimModuleSyntax": false,
     "allowSyntheticDefaultImports": true,
     "isolatedModules": true,
+    "ignoreDeprecations": "6.0",
     "esModuleInterop": false,
     "sourceMap": true,
     "declaration": true,
