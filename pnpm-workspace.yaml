@@ -2,4 +2,7 @@ packages:
   - packages/*
   - examples/*
 
+allowBuilds:
+  esbuild: true
+
 link-workspace-packages: true
