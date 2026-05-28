@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json --noEmit",
+    "build": "tsgo -p tsconfig.json --noEmit",
     "dev": "vitest",
     "test": "vitest run"
   },

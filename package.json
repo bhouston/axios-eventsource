@@ -7,6 +7,7 @@
     "prepare": "husky",
     "build": "pnpm -r build",
     "tsc": "tsgo -b",
+    "tsgo": "tsgo -b",
     "dev": "pnpm --parallel --filter axios-eventsource --filter example-express-server --filter example-fastify-server --filter example-website dev",
     "test": "vitest run",
     "format": "oxfmt .",

@@ -157,7 +157,7 @@ Constants `CONNECTING`, `OPEN`, `CLOSED` and the `SseErrorEvent` class are expor
 ```bash
 pnpm install
 pnpm dev
-pnpm tsc # typescript-native
+pnpm tsgo # typescript-native
 pnpm build
 pnpm lint # oxlint
 pnpm lint:fix
