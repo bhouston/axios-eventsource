@@ -56,6 +56,13 @@ const tickPayloadSchema = z.object({
 
 type TickPayload = z.infer<typeof tickPayloadSchema>;
 
+function readyStateLabel(n: number | undefined) {
+  if (n === 0) return 'CONNECTING';
+  if (n === 1) return 'OPEN';
+  if (n === 2) return 'CLOSED';
+  return '—';
+}
+
 function IndexPage() {
   const [auth, setAuth] = useState<AuthKind>('none');
   const [method, setMethod] = useState<MethodKind>('GET');
@@ -196,13 +203,6 @@ function IndexPage() {
     return () => disconnectAll(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth, method, scenario]);
-
-  const readyStateLabel = (n: number | undefined) => {
-    if (n === 0) return 'CONNECTING';
-    if (n === 1) return 'OPEN';
-    if (n === 2) return 'CLOSED';
-    return '—';
-  };
 
   return (
     <main style={{ fontFamily: 'sans-serif', maxWidth: 960, margin: '2rem auto', padding: '0 1rem' }}>

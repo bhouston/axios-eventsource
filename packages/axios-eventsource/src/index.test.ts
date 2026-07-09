@@ -30,6 +30,11 @@ function makeRequestMock(result: () => Promise<{ status: number; data: unknown; 
   });
 }
 
+const noopListener = () => {};
+const openFn = () => {};
+const messageFn = (_event: SseMessageEvent) => {};
+const errorFn = (_event: SseErrorEventPayload) => {};
+
 describe('axiosEventSource', () => {
   it('supports a provided axios instance', async () => {
     const requestMock = makeRequestMock(async () => ({
@@ -697,7 +702,6 @@ describe('axiosEventSource', () => {
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
     const source = axiosEventSource(client, '/sse');
-    const noopListener = () => {};
     expect(() => source.removeEventListener('nonexistent', noopListener)).not.toThrow();
     source.close();
   });
@@ -723,10 +727,6 @@ describe('axiosEventSource', () => {
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
     const source = axiosEventSource(client, '/sse');
-
-    const openFn = () => {};
-    const messageFn = (_event: SseMessageEvent) => {};
-    const errorFn = (_event: SseErrorEventPayload) => {};
 
     source.onopen = openFn;
     source.onmessage = messageFn;
