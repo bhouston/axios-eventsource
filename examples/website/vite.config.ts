@@ -7,5 +7,5 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
   },
-  plugins: [nitro(), tanstackStart(), react()],
+  plugins: [nitro(), react(), tanstackStart()],
 });
