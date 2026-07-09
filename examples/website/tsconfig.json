@@ -4,6 +4,7 @@
   "compilerOptions": {
     "composite": true,
     "noEmit": true,
+    "rootDir": ".",
     "jsx": "react-jsx",
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "module": "ESNext",
