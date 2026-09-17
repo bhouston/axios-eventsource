@@ -43,6 +43,7 @@ jobs:
       - run: pnpm build
       - run: pnpm tsc
       - run: pnpm lint
+      - run: pnpm test:release
       - run: pnpm test --coverage
       - name: Audit dependencies (advisory during initial rollout)
         continue-on-error: true
