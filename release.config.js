@@ -1,9 +1,15 @@
+import { fileURLToPath } from 'node:url';
+
+// Resolve our writer-compatible preset explicitly; commitlint uses a newer preset
+// which pnpm may otherwise expose first to the release plugins.
+const conventionalCommits = fileURLToPath(import.meta.resolve('conventional-changelog-conventionalcommits'));
+
 export default {
   branches: ['main'],
   tagFormat: 'v${version}',
   plugins: [
-    ['@semantic-release/commit-analyzer', { preset: 'conventionalcommits' }],
-    ['@semantic-release/release-notes-generator', { preset: 'conventionalcommits' }],
+    ['@semantic-release/commit-analyzer', { config: conventionalCommits }],
+    ['@semantic-release/release-notes-generator', { config: conventionalCommits }],
     ['@semantic-release/changelog', { changelogFile: 'packages/axios-eventsource/CHANGELOG.md' }],
     ['@semantic-release/exec', { prepareCmd: 'node scripts/prepare-package.mjs' }],
     ['@semantic-release/npm', { pkgRoot: 'packages/axios-eventsource' }],
