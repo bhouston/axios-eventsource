@@ -154,15 +154,18 @@ Constants `CONNECTING`, `OPEN`, `CLOSED` and the `SseErrorEvent` class are expor
 
 ## Development
 
+Read [CONTRIBUTING.md](CONTRIBUTING.md) for the issue, branch, commit, and PR workflow. Releases are promoted from `dev` to `main`; see [release setup](docs/releasing.md).
+
 ```bash
 pnpm install
 pnpm dev
-pnpm tsgo # typescript-native
+pnpm tsc # type check
 pnpm build
 pnpm lint # oxlint
 pnpm lint:fix
 pnpm format # oxfmt
-pnpm test # vitest
+pnpm test --coverage # vitest and coverage gate
+pnpm size # bundle budget
 ```
 
 `pnpm dev` runs the library in watch mode, Express and Fastify SSE demos, and a demo site. See the repo for layout (`packages/axios-eventsource`, `examples/`, etc.).
@@ -180,7 +183,7 @@ pnpm test # vitest
 [npm-url]: https://www.npmjs.com/package/axios-eventsource
 [npm-downloads]: https://img.shields.io/npm/dw/axios-eventsource
 [npmtrends-url]: https://www.npmtrends.com/axios-eventsource
-[tests-badge]: https://github.com/bhouston/axios-eventsource/workflows/Tests/badge.svg
-[tests-url]: https://github.com/bhouston/axios-eventsource/actions/workflows/test.yml
-[coverage-badge]: https://codecov.io/gh/bhouston/axios-eventsource/branch/main/graph/badge.svg
+[tests-badge]: https://github.com/bhouston/axios-eventsource/actions/workflows/ci.yml/badge.svg
+[tests-url]: https://github.com/bhouston/axios-eventsource/actions/workflows/ci.yml
+[coverage-badge]: https://codecov.io/gh/bhouston/axios-eventsource/branch/dev/graph/badge.svg
 [coverage-url]: https://codecov.io/gh/bhouston/axios-eventsource

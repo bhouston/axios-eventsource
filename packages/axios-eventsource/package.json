@@ -1,6 +1,20 @@
 {
   "name": "axios-eventsource",
   "version": "0.2.1",
+  "description": "Server-Sent Events for Axios with typed events and automatic reconnection",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bhouston/axios-eventsource.git",
+    "directory": "packages/axios-eventsource"
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.test.*",
+    "!dist/**/.tsbuildinfo",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -9,6 +23,9 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     }
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "tsc",
