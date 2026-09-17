@@ -20,7 +20,7 @@ This project uses the MIT license. The release preparation copies the root LICEN
 
 ## GitHub setup
 
-- Use `dev` as the default branch. Require PRs and the `Build, test, audit, and size` check on `dev` and `main`. Disable force pushes and deletion. Enable merge commits (needed for release PRs) and squash merges (for feature PRs).
+- Use `main` as the default branch. Require PRs and the `Build, test, audit, and size` check on `main`. Disable force pushes and deletion. Enable squash merges for feature PRs.
 - Enable private vulnerability reporting under repository Settings → Security. Reports go to the repository's Security → Advisories page.
 - Dependency audit currently reports known vulnerabilities and is advisory. Promote it to a blocking gate once the existing dependency tree has been remediated.
 - Configure `CODECOV_TOKEN` if needed for uploads; the coverage gate runs locally and in CI independently of Codecov availability.
@@ -28,8 +28,8 @@ This project uses the MIT license. The release preparation copies the root LICEN
 
 ## Publishing
 
-Merge feature PRs into `dev`. When ready, open a release PR from `dev` to `main` and use a merge commit. The `release.yml` workflow reruns the quality checks at the exact main commit, then Semantic Release analyzes commits since the last version tag. If there are no release-worthy commits, it does not publish. Otherwise it generates release notes and a changelog, prepares the README and license, updates the package version, publishes with OIDC/provenance, tags, and creates a GitHub release with the changelog attached.
+Merge feature PRs directly into `main`. Merging never publishes by itself. When ready to release, dispatch the workflow: `gh workflow run release.yml --ref main`. The run refuses to proceed if dispatched on anything other than `main`, and aborts rather than publishing if `main` advances between dispatch and the publish step (re-dispatch in that case). It reruns the quality checks at the exact commit that was on `main` at dispatch time, then Semantic Release analyzes commits since the last version tag. If there are no release-worthy commits, the run succeeds as a no-op and says so in the run summary. Otherwise it generates release notes and a changelog, prepares the README and license, updates the package version, publishes with OIDC/provenance, tags, and creates a GitHub release with the changelog attached.
 
-Do not run manual `npm publish` or hand-edit package versions. Source package.json remains a development baseline; the release runner sets the actual version in the published artifact. Changes to CI alone do not force a package release. `pnpm release --dry-run` is useful in configured CI but still verifies repository and npm authentication; it is not an offline check.
+Use the workflow's `dry_run` input to validate a release without publishing.
 
-After release, merge `main` into `dev` so tags and history remain shared. If npm publication succeeds but a later release step fails, inspect npm and GitHub before retrying; published versions cannot be overwritten.
+Do not run manual `npm publish` or hand-edit package versions. Source package.json remains a development baseline; the release runner sets the actual version in the published artifact. Changes to CI alone do not force a package release. If npm publication succeeds but a later release step fails, inspect npm and GitHub before retrying; published versions cannot be overwritten.

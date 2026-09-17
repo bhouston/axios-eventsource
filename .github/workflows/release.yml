@@ -1,8 +1,12 @@
 name: Release
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Validate and preview the release without publishing
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -12,7 +16,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require dispatch on main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Release must be dispatched with ref=main, not ${{ github.ref }}."
+          exit 1
   checks:
+    needs: guard
     uses: ./.github/workflows/ci.yml
     secrets: inherit
   release:
@@ -22,8 +35,18 @@ jobs:
       contents: write
       id-token: write
     steps:
+      - name: Require main has not advanced since dispatch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          latest=$(gh api "repos/${{ github.repository }}/commits/main" --jq .sha)
+          if [ "$latest" != "${{ github.sha }}" ]; then
+            echo "::error::main advanced to $latest since this run was dispatched at ${{ github.sha }}. Re-run the workflow."
+            exit 1
+          fi
       - uses: actions/checkout@v6
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
       - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v6
@@ -32,7 +55,22 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter axios-eventsource build
-      - name: Publish with npm trusted publishing
-        run: pnpm release
+      - name: Release
+        run: |
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            pnpm release --dry-run | tee release.log
+          else
+            pnpm release | tee release.log
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Summarize
+        if: always()
+        run: |
+          if grep -qi "no relevant changes" release.log; then
+            echo "No release-worthy commits since the last release; nothing published." >> "$GITHUB_STEP_SUMMARY"
+          elif [ "${{ inputs.dry_run }}" = "true" ]; then
+            echo "Dry run complete (no publish). See the log above for what semantic-release would do." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Release published. See GitHub Releases and npm for details." >> "$GITHUB_STEP_SUMMARY"
+          fi
