@@ -2,14 +2,15 @@ name: CI
 
 on:
   push:
-    branches: [main, dev]
+    branches: [main]
   pull_request:
-    branches: [main, dev]
+    branches: [main]
     types: [opened, synchronize, reopened, edited]
   workflow_call:
 
 permissions:
   contents: read
+  issues: read
 
 jobs:
   ci:
@@ -33,6 +34,7 @@ jobs:
           PR_BASE: ${{ github.base_ref }}
           PR_HEAD: ${{ github.head_ref }}
           PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/check-pr.mjs
       - name: Lint pull request commits
         if: github.event_name == 'pull_request'

@@ -5,15 +5,15 @@ This is the shared workflow for humans, Claude, and Codex. Read it before making
 ## Issue → branch → PR
 
 1. Before implementing a feature or fix, open a GitHub issue (or reuse the matching existing issue). Use the feature/improvement template: description and motivation, acceptance criteria, and constraints. Agents using `gh issue create` must include the same fields.
-2. Fetch `origin`, branch from `origin/dev`, and name the branch `<type>/<issue>-<short-description>`, for example `feat/42-batch-export`. Never commit directly to `main` or `dev`.
+2. Fetch `origin`, branch from `origin/main`, and name the branch `<type>/<issue>-<short-description>`, for example `feat/42-batch-export`. Never commit directly to `main`.
 3. Use Conventional Commits for every commit: `<type>(optional-scope): description`. Types are `feat`, `fix`, `perf`, `docs`, `chore`, `refactor`, `test`, `style`, `ci`, `build`, and `revert`. Reference the issue in the body when useful. Husky runs commitlint locally; CI checks PR commits and titles. Do not bypass hooks.
 4. Run `pnpm build`, `pnpm tsc`, `pnpm lint`, `pnpm test --coverage`, `pnpm audit --audit-level high`, and `pnpm size`. Resolve build, lint, test, and size failures before requesting review. Dependency auditing is initially advisory because the existing dependency tree has known vulnerabilities; review its findings and track remediation separately. Coverage minimums are 90% statements/lines, 85% branches, and 95% functions. The library bundle budget is 8 kB compressed, excluding Axios and Zod peers.
-5. Push the branch and open a PR against `dev`. Use a Conventional Commit title and include `Closes #<issue>` matching the branch issue, the resulting behavior, and validation results. Feature PRs should be squash-merged with their Conventional Commit title. Do not merge your own PR unless the user explicitly requests it.
-6. Releases use a PR from this repository's `dev` to `main`, titled `chore(release): promote dev to main`. Use a **merge commit**, never squash/rebase: release analysis must retain the original feature/fix commits and tag ancestry. Only merging to `main` triggers publishing. Sync `main` back into `dev` after each release through a numbered branch and PR, also using a merge commit to preserve release tag ancestry.
+5. Push the branch and open a PR against `main`. Use a Conventional Commit title and include `Closes #<issue>` matching the branch issue, the resulting behavior, and validation results. Feature PRs should be squash-merged with their Conventional Commit title. Do not merge your own PR unless the user explicitly requests it.
+6. Merging a PR into `main` runs CI but never publishes. When ready to release, the maintainer manually dispatches the release workflow: `gh workflow run release.yml --ref main`. Semantic Release analyzes commits since the last tag, then publishes, tags, and creates a GitHub release. No promotion or sync-back PRs are needed.
 
 `feat` triggers a minor release; `fix` and `perf` trigger a patch. A `!` after the type/scope or a `BREAKING CHANGE:` footer triggers a major release, including during 0.x. Other types do not normally trigger releases. Do not manually edit versions or generated changelogs.
 
-GitHub only auto-closes issues from closing keywords when the PR targets the default branch. `dev` is the default integration branch so ordinary feature PRs close their issues on merge.
+`main` is the default branch, so ordinary feature PRs close their linked issues on merge.
 
 ## Local setup
 
