@@ -20,6 +20,7 @@ const files = [
   '.github/workflows/ci.yml',
   '.github/workflows/release.yml',
   'scripts/check-pr.mjs',
+  'scripts/check-release.mjs',
   'scripts/prepare-package.mjs',
   'scripts/copy-workflow.mjs',
   'docs/releasing.md',
