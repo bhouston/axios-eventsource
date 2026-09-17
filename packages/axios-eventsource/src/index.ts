@@ -195,10 +195,15 @@ export class AxiosEventSource extends EventTarget {
         try {
           const rawData = JSON.parse(rawEvent.data);
           const parsedData = options.schema.parse(rawData);
-          const parsedEvent = {
-            ...(rawEvent as SseMessageEvent),
+          // MessageEvent metadata lives on its prototype, so object spread drops it.
+          const parsedEvent: SseMessageEvent<unknown> = {
+            type: rawEvent.type,
             data: parsedData,
-          } as SseMessageEvent<unknown>;
+            origin: rawEvent.origin,
+            lastEventId: rawEvent.lastEventId,
+            source: rawEvent.source,
+            ports: rawEvent.ports,
+          };
           if (typeof typedListener === 'function') {
             typedListener(parsedEvent);
             return;

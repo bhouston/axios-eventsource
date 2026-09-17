@@ -535,6 +535,33 @@ describe('axiosEventSource', () => {
     expect(received).toEqual([2]);
   });
 
+  it('schema-validated events preserve native MessageEvent metadata', async () => {
+    const requestMock = makeRequestMock(async () => ({
+      status: 200,
+      data: streamFromSsePayload('id: typed-7\nevent: tick\ndata: {"count":2}\n\n'),
+    }));
+    const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
+    const received: unknown[] = [];
+    const source = axiosEventSource(client, 'https://example.com/sse');
+    source.addEventListener('tick', (event) => received.push(event), {
+      schema: z.object({ count: z.number() }),
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    source.close();
+
+    expect(received).toEqual([
+      {
+        type: 'tick',
+        data: { count: 2 },
+        origin: 'https://example.com',
+        lastEventId: 'typed-7',
+        source: null,
+        ports: [],
+      },
+    ]);
+  });
+
   it('addEventListener with schema calls onParseError for invalid JSON', async () => {
     const requestMock = makeRequestMock(async () => ({
       status: 200,
