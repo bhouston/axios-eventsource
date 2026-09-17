@@ -16,7 +16,7 @@ Do this before merging the first release PR into `main`. No `NPM_TOKEN` or `NODE
 
 ## License
 
-The repository does not yet declare a license. A maintainer must choose one before a LICENSE and package license identifier can be added; workflow setup does not grant new licensing rights. When a root LICENSE is present, it is copied into the published package.
+This project uses the MIT license. The release preparation copies the root LICENSE into the published package, whose metadata declares `MIT`.
 
 ## GitHub setup
 

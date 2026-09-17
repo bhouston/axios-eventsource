@@ -175,6 +175,10 @@ pnpm size # bundle budget
 - **[eventsource-parser](https://github.com/rexxars/eventsource-parser)** — robust SSE stream parsing.
 - **[Zod](https://zod.dev)** — Schema validation for typed event data.
 
+## License
+
+[MIT](LICENSE) © Ben Houston
+
 ## Author
 
 [Ben Houston](https://ben3d.ca), Sponsored by [Land of Assets](https://landofassets.com)

@@ -1,4 +1,5 @@
-import { copyFileSync, existsSync } from 'node:fs';
+import { copyFileSync } from 'node:fs';
 
-copyFileSync('README.md', 'packages/axios-eventsource/README.md');
-if (existsSync('LICENSE')) copyFileSync('LICENSE', 'packages/axios-eventsource/LICENSE');
+for (const file of ['README.md', 'LICENSE']) {
+  copyFileSync(file, `packages/axios-eventsource/${file}`);
+}

@@ -2,6 +2,7 @@
   "name": "axios-eventsource",
   "version": "0.2.1",
   "description": "Server-Sent Events for Axios with typed events and automatic reconnection",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/bhouston/axios-eventsource.git",
