@@ -14,7 +14,8 @@ export default defineConfig({
     include: ['packages/**/*.test.ts', 'examples/**/*.test.ts'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'lcov'],
+      reporter: ['text', 'lcov', 'json-summary'],
+      thresholds: { statements: 90, branches: 85, functions: 95, lines: 90 },
       reportsDirectory: './coverage',
       include: ['packages/axios-eventsource/src/**/*.ts'],
       exclude: ['**/*.test.ts', '**/*.d.ts', '**/types.ts'],
