@@ -58,6 +58,7 @@ jobs:
       - run: pnpm --filter axios-eventsource build
       - name: Release
         run: |
+          set -o pipefail
           if [ "${{ inputs.dry_run }}" = "true" ]; then
             pnpm release --dry-run | tee release.log
           else
