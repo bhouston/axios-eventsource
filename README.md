@@ -13,7 +13,7 @@ See [packages/axios-eventsource/README.md](packages/axios-eventsource/README.md)
 
 ## Development
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) for the issue, branch, commit, and PR workflow. Releases are promoted from `dev` to `main`; see [release setup](docs/releasing.md).
+Read [CONTRIBUTING.md](CONTRIBUTING.md) for the issue, branch, commit, and PR workflow. See [release setup](docs/releasing.md) for how releases are published from `main`.
 
 ```bash
 pnpm install
@@ -48,5 +48,5 @@ pnpm size # bundle budget
 [npmtrends-url]: https://www.npmtrends.com/axios-eventsource
 [tests-badge]: https://github.com/bhouston/axios-eventsource/actions/workflows/ci.yml/badge.svg
 [tests-url]: https://github.com/bhouston/axios-eventsource/actions/workflows/ci.yml
-[coverage-badge]: https://codecov.io/gh/bhouston/axios-eventsource/branch/dev/graph/badge.svg
+[coverage-badge]: https://codecov.io/gh/bhouston/axios-eventsource/branch/main/graph/badge.svg
 [coverage-url]: https://codecov.io/gh/bhouston/axios-eventsource
