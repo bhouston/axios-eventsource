@@ -1,9 +1,7 @@
 {
   "extends": "../../tsconfig.node.json",
   "compilerOptions": {
-    "composite": true,
     "noEmit": true
   },
-  "include": ["src/**/*.ts"],
-  "references": [{ "path": "../axios-eventsource" }]
+  "include": ["src/**/*.ts"]
 }

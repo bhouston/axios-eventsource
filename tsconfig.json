@@ -1,15 +1,5 @@
 {
   "extends": "./tsconfig.base.json",
-  "compilerOptions": {
-    "composite": true
-  },
   "files": [],
-  "include": [],
-  "references": [
-    { "path": "./packages/axios-eventsource" },
-    { "path": "./packages/axios-eventsource-tests" },
-    { "path": "./examples/express-server" },
-    { "path": "./examples/fastify-server" },
-    { "path": "./examples/website" }
-  ]
+  "include": []
 }
