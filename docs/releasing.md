@@ -20,7 +20,7 @@ This project uses the MIT license. The release preparation copies the root LICEN
 
 ## GitHub setup
 
-- Use `main` as the default branch. Require PRs and the `Build, test, audit, and size` check on `main`. Disable force pushes and deletion. Enable squash merges for feature PRs.
+- Use `main` as the default branch. Require PRs and the `Build, test, audit, and size` check on `main`. Disable force pushes and deletion. Disable squash merges; PRs are merged with merge commits.
 - Enable private vulnerability reporting under repository Settings → Security. Reports go to the repository's Security → Advisories page.
 - Dependency audit currently reports known vulnerabilities and is advisory. Promote it to a blocking gate once the existing dependency tree has been remediated.
 - Configure `CODECOV_TOKEN` if needed for uploads; the coverage gate runs locally and in CI independently of Codecov availability.
