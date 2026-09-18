@@ -10,16 +10,8 @@
   "editor.codeActionsOnPaste": {
     "source.fixAll.oxc": "explicit"
   },
-  "typescript.experimental.useTsgo": true,
-  "javascript.preferences.importModuleSpecifier": "relative",
-  "typescript.preferences.importModuleSpecifier": "relative",
-  "javascript.updateImportsOnFileMove.enabled": "always",
-  "typescript.updateImportsOnFileMove.enabled": "always",
   "workbench.editor.enablePreview": false,
   "oxc.typeAware": true,
   "oxc.useExecPath": true,
-  "[json]": {
-    "editor.defaultFormatter": "oxc.oxc-vscode"
-  },
   "editor.formatOnSaveMode": "file"
 }
