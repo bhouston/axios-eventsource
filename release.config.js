@@ -11,8 +11,7 @@ export default {
     ['@semantic-release/commit-analyzer', { config: conventionalCommits }],
     ['@semantic-release/release-notes-generator', { config: conventionalCommits }],
     ['@semantic-release/changelog', { changelogFile: 'packages/axios-eventsource/CHANGELOG.md' }],
-    ['@semantic-release/exec', { prepareCmd: 'node scripts/prepare-package.mjs' }],
-    ['@semantic-release/npm', { pkgRoot: 'packages/axios-eventsource' }],
+    ['@anolilab/semantic-release-pnpm', { pkgRoot: 'packages/axios-eventsource' }],
     [
       '@semantic-release/github',
       {
