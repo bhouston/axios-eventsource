@@ -6,3 +6,6 @@ allowBuilds:
   esbuild: true
 
 link-workspace-packages: true
+
+minimumReleaseAgeExclude:
+  - fastify-file-router@3.0.0
