@@ -4,6 +4,7 @@
 [![NPM Downloads][npm-downloads]][npmtrends-url]
 [![Tests][tests-badge]][tests-url]
 [![Coverage][coverage-badge]][coverage-url]
+[![Discord](https://img.shields.io/badge/Discord-Join%20Chat-5865F2?logo=discord&logoColor=white)][discord-url]
 
 Server-Sent Events (SSE) for Axios — one HTTP client for your whole app.
 
@@ -50,3 +51,4 @@ pnpm size # bundle budget
 [tests-url]: https://github.com/bhouston/axios-eventsource/actions/workflows/ci.yml
 [coverage-badge]: https://codecov.io/gh/bhouston/axios-eventsource/branch/dev/graph/badge.svg
 [coverage-url]: https://codecov.io/gh/bhouston/axios-eventsource
+[discord-url]: https://discord.gg/fwupDN493R
