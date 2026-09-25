@@ -14,7 +14,7 @@ See [packages/axios-eventsource/README.md](packages/axios-eventsource/README.md)
 
 ## Development
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) for the issue, branch, commit, and PR workflow. Releases are promoted from `dev` to `main`; see [release setup](docs/releasing.md).
+Read [CONTRIBUTING.md](CONTRIBUTING.md) for the issue, branch, commit, and PR workflow. See [RELEASING.md](RELEASING.md) for the release process.
 
 ```bash
 pnpm install
