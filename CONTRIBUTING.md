@@ -1,28 +1,59 @@
 # Contributing
 
-This is the shared workflow for humans, Claude, and Codex. Read it before making changes.
+These rules apply to every contributor, human or AI agent (Claude, Codex, and others). This file is the single source of truth for the workflow; `AGENTS.md` and `CLAUDE.md` only point here.
 
 ## Issue → branch → PR
 
-1. Before implementing a feature or fix, open a GitHub issue (or reuse the matching existing issue). Use the feature/improvement template: description and motivation, acceptance criteria, and constraints. Agents using `gh issue create` must include the same fields.
-2. Fetch `origin` and branch from `origin/main`. Branch names are not restricted to any convention. Never commit directly to `main`.
-3. Use Conventional Commits for every commit: `<type>(optional-scope): description`. Types are `feat`, `fix`, `perf`, `docs`, `chore`, `refactor`, `test`, `style`, `ci`, `build`, and `revert`. Reference the issue in the body when useful. Husky runs commitlint locally; CI checks PR commits and titles. Do not bypass hooks.
-4. Run `pnpm build`, `pnpm tsc`, `pnpm lint`, `pnpm test --coverage`, `pnpm audit --audit-level high`, and `pnpm size`. Resolve build, lint, test, and size failures before requesting review. Dependency auditing is initially advisory because the existing dependency tree has known vulnerabilities; review its findings and track remediation separately. Coverage minimums are 90% statements/lines, 85% branches, and 95% functions. The library bundle budget is 8 kB compressed, excluding Axios and Zod peers.
-5. Push the branch and open a PR against `main`. Use a Conventional Commit title and include `Closes #<issue>` matching the branch issue, the resulting behavior, and validation results. PRs are merged with merge commits (`gh pr merge --merge`); do not squash. Do not merge your own PR unless the user explicitly requests it.
-6. Merging a PR into `main` runs CI but never publishes. When ready to release, the maintainer manually dispatches the release workflow: `gh workflow run release.yml --ref main`. Semantic Release analyzes commits since the last tag, then publishes, tags, and creates a GitHub release. No promotion or sync-back PRs are needed.
+1. **Start with an issue.** Before a feature, fix, or other tracked change, open a GitHub issue (or reuse one that already covers it) with the problem, motivation, constraints, and testable acceptance criteria. Agents use `gh issue create` with the same sections.
+2. **Branch from `main`.** Fetch and branch from current `origin/main`, named `<type>/<issue>-<short-description>` (for example `feat/42-batch-export`). Never commit directly to `main`. Use a separate worktree when you have unrelated local changes.
+3. **Commit with Conventional Commits** (see below). Reference the issue in the commit body where useful.
+4. **Run the local checks** below and fix failures before opening the PR.
+5. **Open a PR against `main`** with a Conventional Commit title, `Closes #<issue>` in the body, a description of the resulting behavior, and the validation you ran.
+6. **Merge only on green CI.** Every required check must pass. PRs are merged with merge commits (`gh pr merge --merge`); never squash or rebase-merge. Do not merge your own PR unless the maintainer asked you to.
 
-`feat` triggers a minor release; `fix` and `perf` trigger a patch. A `!` after the type/scope or a `BREAKING CHANGE:` footer triggers a major release, including during 0.x. Other types do not normally trigger releases. Do not manually edit versions or generated changelogs.
+`main` is the default branch and the only integration branch. There are no long-lived release, promotion, or sync branches.
 
-`main` is the default branch, so ordinary feature PRs close their linked issues on merge.
+## Commit format
 
-## Local setup
+Use `type(optional-scope): description` in the imperative mood. Allowed types: `feat`, `fix`, `perf`, `docs`, `chore`, `refactor`, `test`, `style`, `build`, `ci`, `revert`.
 
-Use the Node version in `.nvmrc` and the pnpm version in `package.json`, then run `pnpm install`. Installation enables Husky's pre-commit and commit-msg hooks. `pnpm dev` starts the library and demos.
+- `feat:` produces a minor release.
+- `fix:` and `perf:` produce a patch release.
+- `feat!:` (any type with `!`) or a `BREAKING CHANGE:` footer produces a major release.
+- Other types do not trigger a release on their own.
+
+Husky runs commitlint on every commit after `pnpm install`. CI checks the PR title and every commit in the PR. Git-generated merge commits are exempt.
+
+## Local checks
+
+Use the Node version in `.nvmrc` and the pnpm version pinned in `package.json` (`packageManager`).
+
+```sh
+pnpm install --frozen-lockfile
+pnpm build
+pnpm tsc
+pnpm lint
+pnpm test
+```
+
+The Husky pre-commit hook formats and lints staged files (`oxfmt`, `oxlint --fix`) and type-checks the workspace. CI runs the same checks plus any repository-specific gates, such as coverage floors, bundle-size budgets, package-content checks, and a dependency audit; see `.github/workflows/ci.yml`. Explain any intentional threshold change in the PR.
 
 ## Releases
 
-See [release setup](docs/releasing.md). Semantic Release is configured for the only publishable package, `packages/axios-eventsource`. Workspace examples and test packages remain private. The release runner updates the published package version and creates a changelog asset and GitHub release notes. Generated package metadata is not committed back to source; Git tags and npm are authoritative for published versions. Each changelog asset describes that release; the GitHub Releases list is the cumulative history.
+Merging to `main` never publishes. A release is a separate, deliberate step that the maintainer triggers whenever the changes accumulated on `main` should ship:
 
-## Reusing this workflow
+```sh
+gh workflow run release.yml --ref main                  # release
+gh workflow run release.yml --ref main -f dry_run=true  # preview only, publishes nothing
+```
 
-See [workflow rollout](docs/workflow-rollout.md). Keep these rules in CONTRIBUTING.md; AGENTS.md and CLAUDE.md should only point here.
+The Release workflow refuses any ref other than `main`, re-runs CI on the dispatched commit, and then uses semantic-release to compute the next version from the Conventional Commits since the last release tag, generate release notes, create the tag and GitHub Release, and publish:
+
+- npm packages, through npm trusted publishing (GitHub OIDC, no `NPM_TOKEN`);
+- VS Code extensions, where the repository has one, to the VS Code Marketplace and Open VSX.
+
+When there are no release-worthy commits, the run is a no-op. Never bump versions, edit changelogs, or push release tags by hand.
+
+## Security
+
+Report vulnerabilities privately through GitHub's private vulnerability reporting (see `SECURITY.md` where present), never in a public issue.
