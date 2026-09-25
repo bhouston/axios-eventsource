@@ -19,4 +19,3 @@ vite*.config.js.map
 # Generated in the release runner
 /packages/axios-eventsource/README.md
 /packages/axios-eventsource/LICENSE
-/packages/axios-eventsource/CHANGELOG.md

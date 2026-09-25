@@ -10,7 +10,6 @@ export default {
   plugins: [
     ['@semantic-release/commit-analyzer', { config: conventionalCommits }],
     ['@semantic-release/release-notes-generator', { config: conventionalCommits }],
-    ['@semantic-release/changelog', { changelogFile: 'packages/axios-eventsource/CHANGELOG.md' }],
     ['@anolilab/semantic-release-pnpm', { pkgRoot: 'packages/axios-eventsource' }],
     [
       '@semantic-release/github',
@@ -18,7 +17,6 @@ export default {
         successComment: false,
         failComment: false,
         releasedLabels: false,
-        assets: [{ path: 'packages/axios-eventsource/CHANGELOG.md', label: 'Generated changelog' }],
       },
     ],
   ],
