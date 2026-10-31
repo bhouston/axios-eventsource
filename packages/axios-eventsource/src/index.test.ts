@@ -4,6 +4,13 @@ import { z } from 'zod';
 import type { SseErrorEventPayload, SseMessageEvent } from './index.js';
 import { axiosEventSource, CLOSED, CONNECTING, OPEN } from './index.js';
 
+// addEventListener is typed against EventListener; this narrows a callback to the SSE message event it actually receives.
+function sseListener<T = string>(
+  fn: (event: SseMessageEvent<T>) => unknown,
+): EventListener & ((event: SseMessageEvent<T>) => void) {
+  return fn as EventListener & ((event: SseMessageEvent<T>) => void);
+}
+
 function streamFromSsePayload(payload: string): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
   const data = encoder.encode(payload);
@@ -491,7 +498,10 @@ describe('axiosEventSource', () => {
 
     const received: string[] = [];
     const source = axiosEventSource(client, '/sse');
-    source.addEventListener('ping', (event) => received.push(event.data));
+    source.addEventListener(
+      'ping',
+      sseListener((event) => received.push(event.data)),
+    );
 
     await new Promise((resolve) => setTimeout(resolve, 20));
     source.close();
@@ -508,7 +518,10 @@ describe('axiosEventSource', () => {
 
     const received: SseMessageEvent[] = [];
     const source = axiosEventSource(client, '/sse');
-    source.addEventListener('message', (event) => received.push(event));
+    source.addEventListener(
+      'message',
+      sseListener((event) => received.push(event)),
+    );
 
     await new Promise((resolve) => setTimeout(resolve, 20));
     source.close();
@@ -527,7 +540,13 @@ describe('axiosEventSource', () => {
 
     const received: number[] = [];
     const source = axiosEventSource(client, '/sse');
-    source.addEventListener('tick', (event) => received.push(event.data.count), { schema });
+    source.addEventListener(
+      'tick',
+      sseListener<{ count: number }>((event) => received.push(event.data.count)),
+      {
+        schema,
+      },
+    );
 
     await new Promise((resolve) => setTimeout(resolve, 20));
     source.close();
@@ -573,10 +592,14 @@ describe('axiosEventSource', () => {
     const parsed: number[] = [];
     const parseErrors: unknown[] = [];
     const source = axiosEventSource(client, '/sse');
-    source.addEventListener('tick', (event) => parsed.push(event.data.count), {
-      schema,
-      onParseError: (error) => parseErrors.push(error),
-    });
+    source.addEventListener(
+      'tick',
+      sseListener<{ count: number }>((event) => parsed.push(event.data.count)),
+      {
+        schema,
+        onParseError: (error) => parseErrors.push(error),
+      },
+    );
 
     await new Promise((resolve) => setTimeout(resolve, 20));
     source.close();
@@ -597,10 +620,14 @@ describe('axiosEventSource', () => {
     const parsed: number[] = [];
     const parseErrors: unknown[] = [];
     const source = axiosEventSource(client, '/sse');
-    source.addEventListener('tick', (event) => parsed.push(event.data.count), {
-      schema,
-      onParseError: (error) => parseErrors.push(error),
-    });
+    source.addEventListener(
+      'tick',
+      sseListener<{ count: number }>((event) => parsed.push(event.data.count)),
+      {
+        schema,
+        onParseError: (error) => parseErrors.push(error),
+      },
+    );
 
     await new Promise((resolve) => setTimeout(resolve, 20));
     source.close();
@@ -632,7 +659,11 @@ describe('axiosEventSource', () => {
     const source = axiosEventSource(client, '/sse', {
       reconnect: { initialDelayMs: 5, maxDelayMs: 5 },
     });
-    source.addEventListener('ping', (event) => received.push(event.data), { once: true });
+    source.addEventListener(
+      'ping',
+      sseListener((event) => received.push(event.data)),
+      { once: true },
+    );
 
     await new Promise((resolve) => setTimeout(resolve, 80));
     source.close();
@@ -650,8 +681,8 @@ describe('axiosEventSource', () => {
 
     const received: string[] = [];
     const listenerObj = {
-      handleEvent(event: SseMessageEvent) {
-        received.push(event.data);
+      handleEvent(event: Event) {
+        if (event instanceof MessageEvent) received.push(String(event.data));
       },
     };
     const source = axiosEventSource(client, '/sse');
@@ -671,7 +702,7 @@ describe('axiosEventSource', () => {
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
     const received: string[] = [];
-    const listener = (event: SseMessageEvent) => received.push(event.data);
+    const listener = sseListener((event) => received.push(event.data));
     const source = axiosEventSource(client, '/sse');
     source.addEventListener('ping', listener);
     source.addEventListener('ping', listener);
@@ -690,7 +721,7 @@ describe('axiosEventSource', () => {
     const client = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
 
     const received: string[] = [];
-    const listener = (event: SseMessageEvent) => received.push(event.data);
+    const listener = sseListener((event) => received.push(event.data));
     const source = axiosEventSource(client, '/sse');
     source.addEventListener('ping', listener);
     source.removeEventListener('ping', listener);
@@ -710,7 +741,7 @@ describe('axiosEventSource', () => {
     const schema = z.object({ count: z.number().int() });
 
     const received: number[] = [];
-    const listener = (event: SseMessageEvent<{ count: number }>) => received.push(event.data.count);
+    const listener = sseListener<{ count: number }>((event) => received.push(event.data.count));
     const source = axiosEventSource(client, '/sse');
     source.addEventListener('tick', listener, { schema });
     source.removeEventListener('tick', listener);
