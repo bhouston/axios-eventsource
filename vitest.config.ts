@@ -11,6 +11,7 @@ export default defineConfig({
     },
   },
   test: {
+    fsModuleCache: true,
     include: ['packages/**/*.test.ts', 'examples/**/*.test.ts'],
     coverage: {
       provider: 'v8',
