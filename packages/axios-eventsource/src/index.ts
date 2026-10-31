@@ -305,7 +305,7 @@ export class AxiosEventSource extends EventTarget {
 
           if (rejectNonEventStream && !isEventStreamResponse(response)) {
             throw new Error(
-              `Expected Content-Type text/event-stream, got ${response.headers?.['content-type'] ?? 'unknown'}`,
+              `Expected Content-Type text/event-stream, got ${String(response.headers?.['content-type'] ?? 'unknown')}`,
             );
           }
 
