@@ -28,7 +28,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsrs",
     "dev": "tsc -w --preserveWatchOutput --noEmitOnError",
     "test": "vitest run"
   },
