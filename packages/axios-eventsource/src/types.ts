@@ -63,7 +63,7 @@ export type SchemaAddEventListenerOptions<T> = AddEventListenerOptions & {
 export type SseEventListener<T> = ((event: T) => void) | { handleEvent(event: T): void };
 export type AxiosEventSourceOptions = Omit<
   AxiosRequestConfig,
-  'adapter' | 'auth' | 'decompress' | 'method' | 'responseType' | 'signal'
+  'adapter' | 'auth' | 'decompress' | 'headers' | 'method' | 'responseType' | 'signal'
 > & {
   auth?: AuthStrategy;
   headers?: RawAxiosRequestHeaders;

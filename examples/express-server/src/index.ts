@@ -159,7 +159,7 @@ function handleRetryStream(req: express.Request, res: express.Response): void {
 }
 
 app.get('/sse', (req, res) => {
-  const mode = String(req.query.auth ?? 'none');
+  const mode = typeof req.query.auth === 'string' ? req.query.auth : 'none';
   if (!isAuthorized(req.header('authorization'), mode)) {
     res.status(401).json({ error: 'Unauthorized' });
     return;
@@ -168,7 +168,7 @@ app.get('/sse', (req, res) => {
 });
 
 app.post('/sse', (req, res) => {
-  const mode = String(req.query.auth ?? 'none');
+  const mode = typeof req.query.auth === 'string' ? req.query.auth : 'none';
   if (!isAuthorized(req.header('authorization'), mode)) {
     res.status(401).json({ error: 'Unauthorized' });
     return;
