@@ -28,6 +28,8 @@ pnpm test --coverage # vitest and coverage gate
 pnpm size # bundle budget
 ```
 
+`pnpm tsc` and the TypeScript build steps use the pinned experimental [tsrs](https://github.com/oxc-project/tsrs) compiler in its default compatibility mode. TypeScript remains installed for editor tooling and the library’s watch command, because tsrs does not yet support watch mode on Windows.
+
 `pnpm dev` runs the library in watch mode, Express and Fastify SSE demos, and a demo site. See the repo for layout (`packages/axios-eventsource`, `examples/`, etc.).
 
 ## Acknowledgments
