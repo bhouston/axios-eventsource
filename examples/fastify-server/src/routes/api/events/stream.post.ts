@@ -28,7 +28,7 @@ export const route = defineRoute({
     } as const,
   },
   handler: async (request, reply) => {
-    const mode = String((request.query as { auth?: string }).auth ?? 'none');
+    const mode = (request.query as { auth?: string }).auth ?? 'none';
     if (!isAuthorized(request.headers.authorization, mode)) {
       return reply.status(401).send({ error: 'Unauthorized' });
     }

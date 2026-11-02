@@ -179,7 +179,7 @@ export class AxiosEventSource extends EventTarget {
     }
 
     if (isSchemaAddEventListenerOptions(options)) {
-      const listenerKey = listener as unknown as object;
+      const listenerKey = listener;
       const wrappersByType = this._typedListenerWrappers.get(type) ?? new WeakMap<object, EventListener>();
       this._typedListenerWrappers.set(type, wrappersByType);
 
@@ -235,10 +235,10 @@ export class AxiosEventSource extends EventTarget {
     }
 
     const wrappersByType = this._typedListenerWrappers.get(type);
-    const wrapper = wrappersByType?.get(listener as unknown as object);
+    const wrapper = wrappersByType?.get(listener);
     if (wrapper !== undefined) {
       super.removeEventListener(type, wrapper, options);
-      wrappersByType?.delete(listener as unknown as object);
+      wrappersByType?.delete(listener);
       return;
     }
 
@@ -321,7 +321,7 @@ export class AxiosEventSource extends EventTarget {
 
           const openEvent = new Event('open');
           this.dispatchEvent(openEvent);
-          this._onopen?.(openEvent as SseEvent);
+          this._onopen?.(openEvent);
 
           for await (const parsed of parseSseStream(
             response.data as ReadableStream<Uint8Array>,

@@ -199,9 +199,7 @@ describe('axiosEventSource', () => {
       data: streamFromSsePayload('data: hi\n\n'),
     }));
     const mockClient = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
-    const createSpy = vi
-      .spyOn(axios, 'create')
-      .mockReturnValue(mockClient as unknown as ReturnType<typeof axios.create>);
+    const createSpy = vi.spyOn(axios, 'create').mockReturnValue(mockClient);
 
     try {
       const source = axiosEventSource('http://localhost/sse', {
@@ -298,7 +296,7 @@ describe('axiosEventSource', () => {
     const firstError = errorEvents[0];
     expect(firstError?.type).toBe('error');
     expect(firstError?.error).toBeInstanceOf(Error);
-    expect((firstError!.error as Error).message).toContain('503');
+    expect(firstError.error.message).toContain('503');
   });
 
   it("onerror receives SseErrorEvent with type 'error' and error field", async () => {
@@ -921,7 +919,7 @@ describe('axiosEventSource', () => {
     await new Promise((resolve) => setTimeout(resolve, 30));
     source.close();
     expect(errorEvents).toHaveLength(1);
-    expect((errorEvents[0]!.error as Error).message).toContain('Content-Type');
+    expect(errorEvents[0].error.message).toContain('Content-Type');
   });
 
   it('stops reconnecting after maxRetries failures', async () => {
