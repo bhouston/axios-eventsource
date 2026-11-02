@@ -199,9 +199,7 @@ describe('axiosEventSource', () => {
       data: streamFromSsePayload('data: hi\n\n'),
     }));
     const mockClient = { get: vi.fn(), request: requestMock } as unknown as AxiosInstance;
-    const createSpy = vi
-      .spyOn(axios, 'create')
-      .mockReturnValue(mockClient as unknown as ReturnType<typeof axios.create>);
+    const createSpy = vi.spyOn(axios, 'create').mockReturnValue(mockClient);
 
     try {
       const source = axiosEventSource('http://localhost/sse', {
