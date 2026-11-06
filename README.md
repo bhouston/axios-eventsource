@@ -41,7 +41,7 @@ stream.onmessage = (event) => console.log(event.data);
 
 ## Development
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) for the issue, branch, commit, and PR workflow. See [RELEASING.md](RELEASING.md) for the release process and [SECURITY.md](SECURITY.md) to report vulnerabilities.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) for the issue, branch, commit, and PR workflow.
 
 ```bash
 pnpm install
@@ -63,6 +63,10 @@ pnpm size # bundle budget
 
 - **[eventsource-parser](https://github.com/rexxars/eventsource-parser)**: robust SSE stream parsing.
 - **[Zod](https://zod.dev)**: schema validation for typed event data.
+
+## Releases
+
+See [RELEASING.md](RELEASING.md) for how releases are published and [GitHub Releases](https://github.com/bhouston/axios-eventsource/releases) for changes. See [SECURITY.md](SECURITY.md) to report vulnerabilities.
 
 ## Contribution
 
