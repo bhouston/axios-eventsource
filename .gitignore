@@ -19,3 +19,8 @@ vite*.config.js.map
 # Generated in the release runner
 /packages/axios-eventsource/README.md
 /packages/axios-eventsource/LICENSE
+
+# Agent tooling
+.claude/
+.codex/
+.cursor/
